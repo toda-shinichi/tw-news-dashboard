@@ -15,7 +15,7 @@ export function getDateRange(tab: TabRange): { from: Date; to: Date } {
   const from = new Date()
   switch (tab) {
     case 'today':
-      from.setHours(0, 0, 0, 0)
+      from.setTime(from.getTime() - 24 * 60 * 60 * 1000) // 過去 24 小時
       break
     case '3days':
       from.setDate(from.getDate() - 3)

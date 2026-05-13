@@ -8,15 +8,35 @@ interface RSSSource {
   column: NewsColumn
 }
 
+// Google News site: query helper
+const gn = (site: string, col: NewsColumn, label: string): RSSSource => ({
+  name: label,
+  url: `https://news.google.com/rss/search?q=site:${site}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`,
+  column: col,
+})
+
 const RSS_SOURCES: RSSSource[] = [
-  { name: '中央社', url: 'https://www.cna.com.tw/rss/aall.aspx', column: 'tw' },
-  { name: '聯合新聞網', url: 'https://udn.com/rssfeed/news/2/BREAKINGNEWS?ch=news', column: 'tw' },
-  { name: '中時電子報', url: 'https://www.chinatimes.com/rss/realtimenews.xml', column: 'tw' },
-  { name: '自由時報', url: 'https://feeds.ltn.com.tw/rss/all', column: 'tw' },
-  { name: '民視新聞', url: 'https://www.ftvnews.com.tw/rss/news.xml', column: 'tw' },
-  { name: 'ETtoday', url: 'https://www.ettoday.net/show_info/rss2.xml', column: 'tw' },
-  { name: '風傳媒', url: 'https://www.storm.mg/rss.xml', column: 'tw' },
-  { name: 'TVBS', url: 'https://news.tvbs.com.tw/rss', column: 'tw' },
+  // ── 台灣媒體（直連可用的）────────────────────────
+  {
+    name: '自由時報',
+    url: 'https://news.ltn.com.tw/rss/all.xml',
+    column: 'tw',
+  },
+  {
+    name: '聯合新聞網',
+    url: 'https://udn.com/rssfeed/news/2/BREAKINGNEWS?ch=news',
+    column: 'tw',
+  },
+  // ── 台灣媒體（Google News site: 查詢）──────────────
+  gn('udn.com', 'tw', '聯合新聞網'),
+  gn('chinatimes.com', 'tw', '中時電子報'),
+  gn('ettoday.net', 'tw', 'ETtoday'),
+  gn('tvbs.com.tw', 'tw', 'TVBS'),
+  gn('ftvnews.com.tw', 'tw', '民視新聞'),
+  gn('storm.mg', 'tw', '風傳媒'),
+  gn('cna.com.tw', 'tw', '中央社'),
+  gn('setn.com', 'tw', '三立新聞'),
+  // ── Google News 主題（台灣）────────────────────────
   {
     name: 'Google News 政治',
     url: 'https://news.google.com/rss/search?q=台灣政治&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
@@ -32,6 +52,7 @@ const RSS_SOURCES: RSSSource[] = [
     url: 'https://news.google.com/rss/search?q=台灣財經&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
     column: 'tw',
   },
+  // ── 國際視角 ──────────────────────────────────────
   {
     name: 'Google News 國際',
     url: 'https://news.google.com/rss/search?q=Taiwan+international&hl=en-US&gl=US&ceid=US:en',
@@ -42,16 +63,23 @@ const RSS_SOURCES: RSSSource[] = [
     url: 'https://news.google.com/rss/search?q=兩岸關係&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
     column: 'intl',
   },
+  {
+    name: 'Google News Taiwan',
+    url: 'https://news.google.com/rss/search?q=Taiwan&hl=en-US&gl=US&ceid=US:en',
+    column: 'intl',
+  },
 ]
 
 async function fetchOneFeed(source: RSSSource): Promise<NewsItem[]> {
   try {
     const resp = await fetch(source.url, {
-      headers: { 'User-Agent': 'TW-News-Dashboard/1.0' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TW-News-Dashboard/1.0)' },
       signal: AbortSignal.timeout(8000),
     })
     if (!resp.ok) return []
     const xml = await resp.text()
+    if (!xml.includes('<item>') && !xml.includes('<item/>')) return []
+
     const parsed = await xml2js.parseStringPromise(xml, {
       explicitArray: false,
       trim: true,
@@ -67,20 +95,27 @@ async function fetchOneFeed(source: RSSSource): Promise<NewsItem[]> {
 
     return rawItems
       .map((item: Record<string, string>) => {
-        const title = String(item.title || '').replace(/<!\[CDATA\[|\]\]>/g, '').trim()
+        const title = String(item.title || '')
+          .replace(/<!\[CDATA\[|\]\]>/g, '')
+          .trim()
         const url = String(item.link || item.guid || '')
+        if (!title || !url) return null
         const pubDate = item.pubDate || item['dc:date'] || new Date().toISOString()
         const rawDesc = String(item.description || '')
-        const summary = rawDesc.replace(/<[^>]+>/g, '').replace(/<!\[CDATA\[|\]\]>/g, '').trim() || undefined
+        const summary =
+          rawDesc
+            .replace(/<[^>]+>/g, '')
+            .replace(/<!\[CDATA\[|\]\]>/g, '')
+            .trim()
+            .slice(0, 200) || undefined
 
-        if (!title || !url) return null
         return {
           id: hashString(title + url),
           title,
           url,
           source: source.name,
           publishedAt: new Date(pubDate).toISOString(),
-          summary: summary ? summary.slice(0, 200) : undefined,
+          summary,
           column: source.column,
         } as NewsItem
       })
