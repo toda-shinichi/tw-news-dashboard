@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import clsx from 'clsx'
 import { NewsItem, NewsCategory } from '@/types'
 import NewsCard from './NewsCard'
 import LoadingState from './LoadingState'
+
+const PAGE_SIZE = 30
 
 interface NewsColumnProps {
   title: string
@@ -35,8 +37,9 @@ export default function NewsColumn({
   selectedKeyword,
 }: NewsColumnProps) {
   const [selectedCat, setSelectedCat] = useState<NewsCategory>('all')
+  const [page, setPage] = useState(1)
 
-  const displayItems = useMemo(() => {
+  const filteredItems = useMemo(() => {
     let result = items
     if (selectedCat !== 'all') {
       result = result.filter(item =>
@@ -54,6 +57,12 @@ export default function NewsColumn({
     }
     return result
   }, [items, selectedCat, selectedKeyword])
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1) }, [selectedCat, selectedKeyword])
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE))
+  const displayItems = filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   return (
     <div className="flex flex-col gap-3">
@@ -111,6 +120,29 @@ export default function NewsColumn({
       {!loading && !error && displayItems.map(item => (
         <NewsCard key={item.id} item={item} />
       ))}
+
+      {/* Pagination */}
+      {!loading && !error && filteredItems.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between pt-1">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="px-3 py-1.5 text-xs text-[#5B7FA6] border border-[#E8E4DC] rounded-lg hover:bg-[#EBF0F7] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            ← 上一頁
+          </button>
+          <span className="text-xs text-[#888888]">
+            第 {page} / {totalPages} 頁・共 {filteredItems.length} 則
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className="px-3 py-1.5 text-xs text-[#5B7FA6] border border-[#E8E4DC] rounded-lg hover:bg-[#EBF0F7] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          >
+            下一頁 →
+          </button>
+        </div>
+      )}
     </div>
   )
 }

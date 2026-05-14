@@ -3,7 +3,8 @@ import { extractHotList, HotList } from '@/lib/ai'
 import { cacheGet, cacheSet } from '@/lib/cache'
 import { dedupeByTitle } from '@/lib/utils'
 import { getAccumulatedNews } from '@/lib/newsStore'
-import { TabRange } from '@/types'
+import { saveSnapshot } from '@/lib/history'
+import { TabRange, SummaryData } from '@/types'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -36,5 +37,17 @@ export async function GET(req: NextRequest) {
 
   const response: HotListResponse = { tw: twHot, intl: intlHot, fromCache: false }
   await cacheSet(cacheKey, response)
+
+  // Save a history snapshot (combines hotlist with the current cached summary)
+  const summaryCache = await cacheGet<{ data: SummaryData; generatedAt: string }>(`summary:${tab}`)
+  if (summaryCache?.data?.overview) {
+    await saveSnapshot({
+      generatedAt: new Date().toISOString(),
+      tab,
+      summary: summaryCache.data,
+      hotlist: { tw: twHot, intl: intlHot },
+    })
+  }
+
   return NextResponse.json(response)
 }

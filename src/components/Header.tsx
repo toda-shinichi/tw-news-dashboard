@@ -60,10 +60,15 @@ export default function Header({ updatedAt, onRefresh, refreshing }: HeaderProps
           {/* Archive link */}
           <Link
             href="/archive"
-            className="text-xs text-[#888888] hover:text-[#5B7FA6] transition-colors hidden sm:block"
-            title="新聞存檔"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#EBF0F7] text-[#5B7FA6] text-xs font-medium hover:bg-[#D6E4F0] transition-colors"
+            title="24 小時以上的新聞會自動歸檔到這裡"
           >
-            存檔
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="21 8 21 21 3 21 3 8" />
+              <rect x="1" y="3" width="22" height="5" />
+              <line x1="10" y1="12" x2="14" y2="12" />
+            </svg>
+            查詢歷史新聞
           </Link>
 
           {/* Sources info button */}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateSummary } from '@/lib/ai'
 import { cacheGet, cacheSet } from '@/lib/cache'
 import { getAccumulatedNews } from '@/lib/newsStore'
+import { saveSnapshot } from '@/lib/history'
 import { TabRange, SummaryResponse, SummaryData } from '@/types'
 
 export const runtime = 'nodejs'
@@ -36,8 +37,10 @@ export async function GET(req: NextRequest) {
     fromCache: false,
   }
 
+  const isValid = !!(data.overview && !data.overview.startsWith('AI 分析') && !data.overview.startsWith('目前無法'))
+
   // Only cache successful results (30-min TTL to align with news refresh cycle)
-  if (data.overview && !data.overview.startsWith('AI 分析') && !data.overview.startsWith('目前無法')) {
+  if (isValid) {
     await cacheSet(cacheKey, response, 1800)
   }
   return NextResponse.json(response)
