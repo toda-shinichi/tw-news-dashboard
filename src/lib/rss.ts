@@ -256,8 +256,12 @@ function cleanTitle(raw: string): string {
 async function fetchOneFeed(source: RSSSource): Promise<NewsItem[]> {
   try {
     const resp = await fetch(source.url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TW-News-Dashboard/1.0)' },
-      signal: AbortSignal.timeout(8000),
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
+      },
+      signal: AbortSignal.timeout(10000),
     })
     if (!resp.ok) return []
     const xml = await resp.text()

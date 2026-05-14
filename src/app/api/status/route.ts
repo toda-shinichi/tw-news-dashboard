@@ -16,8 +16,26 @@ export async function GET() {
   const fmt = (ts: number | null) =>
     ts ? new Date(ts).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }) : '尚未更新'
 
+  const dateRange = (items: NewsItem[] | null) => {
+    if (!items || items.length === 0) return null
+    const dates = items.map(i => new Date(i.publishedAt).getTime()).filter(Boolean)
+    return {
+      newest: new Date(Math.max(...dates)).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }),
+      oldest: new Date(Math.min(...dates)).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' }),
+    }
+  }
+
   return NextResponse.json({
-    tw:   { count: twItems?.length ?? 0,   lastFetch: fmt(twFetch),   lastExternal: fmt(twExt) },
-    intl: { count: intlItems?.length ?? 0, lastFetch: fmt(intlFetch), lastExternal: '—' },
+    tw: {
+      count: twItems?.length ?? 0,
+      lastFetch: fmt(twFetch),
+      lastExternal: fmt(twExt),
+      dateRange: dateRange(twItems),
+    },
+    intl: {
+      count: intlItems?.length ?? 0,
+      lastFetch: fmt(intlFetch),
+      dateRange: dateRange(intlItems),
+    },
   })
 }

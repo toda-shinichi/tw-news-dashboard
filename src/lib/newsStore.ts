@@ -7,7 +7,7 @@ import { fetchGNews } from './gnews'
 import { filterByDateRange, classifyCategory } from './utils'
 import { NewsItem, NewsColumn, TabRange } from '@/types'
 
-const FETCH_INTERVAL_MS = 30 * 60 * 1000   // 30 min: RSS + GDELT
+const FETCH_INTERVAL_MS = 15 * 60 * 1000   // 15 min: RSS + GDELT
 const EXT_INTERVAL_MS   = 24 * 60 * 60 * 1000 // 24 hr: Mediastack + GNews (quota 保護)
 const MAX_ITEMS = 800
 const MAX_DAYS  = 30

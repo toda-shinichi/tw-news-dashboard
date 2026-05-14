@@ -6,7 +6,7 @@ import { getAccumulatedNews } from '@/lib/newsStore'
 import { TabRange, NewsColumn, NewsResponse } from '@/types'
 
 export const runtime = 'nodejs'
-export const maxDuration = 30
+export const maxDuration = 60
 
 export async function GET(req: NextRequest) {
   const tab = (req.nextUrl.searchParams.get('tab') || 'today') as TabRange
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
   let filtered = dedupeByTitle(rawItems)
   filtered.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-  filtered = filtered.slice(0, 60)
+  filtered = filtered.slice(0, 150)
 
   const sentimentMap = await analyzeSentiment(filtered)
   const withSentiment = filtered.map(item => ({
