@@ -23,11 +23,11 @@ const CATEGORY_TABS: { value: NewsCategory; label: string }[] = [
   { value: 'all', label: '全部' },
   { value: 'politics', label: '政治' },
   { value: 'society', label: '社會' },
-  { value: 'entertainment', label: '娛樂' },
-  { value: 'finance', label: '財經' },
-  { value: 'tech', label: '科技' },
   { value: 'life', label: '民生' },
 ]
+
+// legacy categories stored in Redis before the 4-cat consolidation
+const LIFE_CATS = new Set(['life', 'entertainment', 'finance', 'tech'])
 
 function RankedList({ items, loading }: { items: string[]; loading?: boolean }) {
   if (loading) {
@@ -141,12 +141,17 @@ export default function HotList({ tw, intl, loading, twItems = [], intlItems = [
   const [selectedCat, setSelectedCat] = useState<NewsCategory>('all')
   const isFiltered = selectedCat !== 'all'
 
+  const matchesCat = (cat: string | undefined) =>
+    selectedCat === 'life' ? LIFE_CATS.has(cat ?? '') : cat === selectedCat
+
   const filteredTwTitles = useMemo(
-    () => (isFiltered ? twItems.filter(i => i.category === selectedCat).map(i => i.title) : []),
+    () => (isFiltered ? twItems.filter(i => matchesCat(i.category)).map(i => i.title) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [isFiltered, twItems, selectedCat]
   )
   const filteredIntlTitles = useMemo(
-    () => (isFiltered ? intlItems.filter(i => i.category === selectedCat).map(i => i.title) : []),
+    () => (isFiltered ? intlItems.filter(i => matchesCat(i.category)).map(i => i.title) : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [isFiltered, intlItems, selectedCat]
   )
 

@@ -19,11 +19,10 @@ const CATEGORY_TABS: { value: NewsCategory; label: string }[] = [
   { value: 'all', label: '全部' },
   { value: 'politics', label: '政治' },
   { value: 'society', label: '社會' },
-  { value: 'entertainment', label: '娛樂' },
-  { value: 'finance', label: '財經' },
-  { value: 'tech', label: '科技' },
   { value: 'life', label: '民生' },
 ]
+
+const LIFE_CATS = new Set(['life', 'entertainment', 'finance', 'tech'])
 
 export default function NewsColumn({
   title,
@@ -38,7 +37,11 @@ export default function NewsColumn({
   const displayItems = useMemo(() => {
     let result = items
     if (selectedCat !== 'all') {
-      result = result.filter(item => item.category === selectedCat)
+      result = result.filter(item =>
+        selectedCat === 'life'
+          ? LIFE_CATS.has(item.category ?? '')
+          : item.category === selectedCat
+      )
     }
     if (selectedKeyword) {
       result = result.filter(

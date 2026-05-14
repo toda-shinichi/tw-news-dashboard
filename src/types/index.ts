@@ -1,7 +1,7 @@
 export type SentimentLabel = 'positive' | 'negative' | 'neutral'
 export type TabRange = 'today' | '3days' | 'week' | 'month'
 export type NewsColumn = 'tw' | 'intl'
-export type NewsCategory = 'all' | 'politics' | 'society' | 'entertainment' | 'finance' | 'tech' | 'life'
+export type NewsCategory = 'all' | 'politics' | 'society' | 'life'
 
 export interface NewsItem {
   id: string
