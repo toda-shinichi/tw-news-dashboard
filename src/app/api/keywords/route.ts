@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchAllRSS } from '@/lib/rss'
 import { extractKeywords } from '@/lib/ai'
 import { cacheGet, cacheSet } from '@/lib/cache'
-import { filterByDateRange } from '@/lib/utils'
+import { getAccumulatedNews } from '@/lib/newsStore'
 import { TabRange, KeywordsResponse } from '@/types'
 
 export const runtime = 'nodejs'
@@ -18,10 +17,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ...cached, fromCache: true })
   }
 
-  const allItems = await fetchAllRSS()
-  const filtered = filterByDateRange(allItems, tab)
+  const [twItems, intlItems] = await Promise.all([
+    getAccumulatedNews('tw', tab, force),
+    getAccumulatedNews('intl', tab, force),
+  ])
+  const allItems = [...twItems, ...intlItems]
 
-  const keywords = await extractKeywords(filtered)
+  const keywords = await extractKeywords(allItems)
 
   const response: KeywordsResponse = {
     keywords,
