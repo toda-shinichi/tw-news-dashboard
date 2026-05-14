@@ -13,7 +13,12 @@ export async function GET(req: NextRequest) {
   const cacheKey = `summary:${tab}`
 
   const cached = await cacheGet<SummaryResponse>(cacheKey)
-  if (cached && !force) {
+  // Only serve cache if it has a valid (non-empty, non-error) overview
+  const isValidCache = cached && cached.data?.overview &&
+    !cached.data.overview.startsWith('AI 分析') &&
+    !cached.data.overview.startsWith('目前無法') &&
+    !cached.data.overview.startsWith('此時段')
+  if (isValidCache && !force) {
     return NextResponse.json({ ...cached, fromCache: true })
   }
 
@@ -31,6 +36,9 @@ export async function GET(req: NextRequest) {
     fromCache: false,
   }
 
-  await cacheSet(cacheKey, response)
+  // Only cache successful results (30-min TTL to align with news refresh cycle)
+  if (data.overview && !data.overview.startsWith('AI 分析') && !data.overview.startsWith('目前無法')) {
+    await cacheSet(cacheKey, response, 1800)
+  }
   return NextResponse.json(response)
 }
