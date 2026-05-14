@@ -16,12 +16,16 @@ const SOURCES = [
     items: ['政治', '社會', '生活', '財經', '娛樂', '軍武', '國際'],
   },
   {
-    group: '國際',
-    items: ['Google News 國際', 'Google News 兩岸', 'Google News Taiwan', 'GDELT 全球媒體'],
+    group: 'Google News 主題（台灣）',
+    items: ['政治', '外交', '國防', '選舉', '社會', '司法', '環境', '財經', '房市', '半導體', '科技', '民生', '醫療', '娛樂', '體育'],
+  },
+  {
+    group: 'Google News 主題（國際）',
+    items: ['Taiwan', '國際', '兩岸', '台海安全', '美中貿易', '俄烏', '中東', '亞太', '全球經濟', '中國'],
   },
   {
     group: '新聞 API',
-    items: ['NewsAPI.org'],
+    items: ['GDELT 全球媒體', 'NewsAPI.org'],
   },
 ]
 
