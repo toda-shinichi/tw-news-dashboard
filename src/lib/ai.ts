@@ -1,8 +1,8 @@
 import OpenAI from 'openai'
 import { NewsItem, SentimentLabel, SummaryData } from '@/types'
 
-const MODEL_QUALITY = 'grok-4.20-fast'
-const MODEL_FAST    = 'grok-4.20-fast'
+const MODEL_QUALITY = 'kimi-k2'
+const MODEL_FAST    = 'kimi-k2'
 
 function getClient(): OpenAI {
   return new OpenAI({
