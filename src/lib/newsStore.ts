@@ -2,16 +2,19 @@ import { cacheGet, cacheSet } from './cache'
 import { fetchAllRSS } from './rss'
 import { fetchNewsAPI } from './newsapi'
 import { fetchGDELT, fetchGDELTTaiwan } from './gdelt'
+import { fetchMediastack } from './mediastack'
+import { fetchGNews } from './gnews'
 import { filterByDateRange, classifyCategory } from './utils'
 import { NewsItem, NewsColumn, TabRange } from '@/types'
 
-const FETCH_INTERVAL_MS = 30 * 60 * 1000
+const FETCH_INTERVAL_MS = 30 * 60 * 1000   // 30 min: RSS + GDELT
+const EXT_INTERVAL_MS   = 24 * 60 * 60 * 1000 // 24 hr: Mediastack + GNews (quota 保護)
 const MAX_ITEMS = 800
-const MAX_DAYS = 30
+const MAX_DAYS  = 30
 const TTL = MAX_DAYS * 86_400
 
 function mergeStore(incoming: NewsItem[], existing: NewsItem[]): NewsItem[] {
-  const seen = new Set<string>()
+  const seen   = new Set<string>()
   const cutoff = Date.now() - MAX_DAYS * 86_400_000
   return [...incoming, ...existing]
     .filter(item => {
@@ -23,19 +26,36 @@ function mergeStore(incoming: NewsItem[], existing: NewsItem[]): NewsItem[] {
     .slice(0, MAX_ITEMS)
 }
 
+// Mediastack + GNews — 每日限額，獨立計時
+async function fetchExternalTW(isBackfill: boolean): Promise<NewsItem[]> {
+  const extKey  = 'news:ext:tw'
+  const lastExt = await cacheGet<number>(extKey)
+  const needExt = isBackfill || !lastExt || Date.now() - lastExt > EXT_INTERVAL_MS
+  if (!needExt) return []
+
+  const daysBack = isBackfill ? 30 : 1
+  const [ms, gn] = await Promise.allSettled([
+    fetchMediastack(daysBack),
+    fetchGNews(daysBack),
+  ])
+  await cacheSet(extKey, Date.now(), TTL)
+  return [
+    ...(ms.status === 'fulfilled' ? ms.value : []),
+    ...(gn.status === 'fulfilled' ? gn.value : []),
+  ]
+}
+
 async function fetchFresh(col: NewsColumn, isBackfill: boolean): Promise<NewsItem[]> {
-  // On first run (empty store), pull 30 days of history from GDELT so time tabs work immediately.
-  // Subsequent fetches only pull the latest day.
   const gdeltSpan = isBackfill ? '30d' : '7d'
 
   if (col === 'tw') {
-    const [rss, api, gdelt] = await Promise.all([
+    const [rss, api, gdelt, ext] = await Promise.all([
       fetchAllRSS('tw'),
       fetchNewsAPI(),
-      // GDELT indexes many TW Chinese-language sources — gives instant historical depth
       fetchGDELTTaiwan(gdeltSpan),
+      fetchExternalTW(isBackfill),
     ])
-    return [...rss, ...api, ...gdelt]
+    return [...rss, ...api, ...gdelt, ...ext]
   } else {
     const [rss, gdelt] = await Promise.all([
       fetchAllRSS('intl'),
@@ -51,7 +71,7 @@ export async function getAccumulatedNews(
   force = false
 ): Promise<NewsItem[]> {
   const accKey = `news:acc:${col}`
-  const tsKey = `news:fetch:${col}`
+  const tsKey  = `news:fetch:${col}`
 
   const [existing, lastFetchAt] = await Promise.all([
     cacheGet<NewsItem[]>(accKey),
