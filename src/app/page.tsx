@@ -16,34 +16,31 @@ interface HotData {
 }
 
 interface PageState {
-  twNews: NewsItem[]
-  intlNews: NewsItem[]
+  allNews: NewsItem[]
   summary: SummaryData | null
   keywords: Array<{ word: string; count: number }>
-  hotlist: { tw: HotData; intl: HotData }
+  hotlist: { tw: HotData }
   updatedAt?: string
   loading: {
-    tw: boolean
-    intl: boolean
+    news: boolean
     summary: boolean
     keywords: boolean
     hotlist: boolean
   }
-  error: { tw?: string; intl?: string }
-  building: { tw: boolean; intl: boolean }
+  error: { news?: string }
+  building: boolean
 }
 
 const EMPTY_HOTDATA: HotData = { topics: [], keywords: [], people: [] }
 
 const INITIAL_STATE: PageState = {
-  twNews: [],
-  intlNews: [],
+  allNews: [],
   summary: null,
   keywords: [],
-  hotlist: { tw: EMPTY_HOTDATA, intl: EMPTY_HOTDATA },
-  loading: { tw: true, intl: true, summary: true, keywords: true, hotlist: true },
+  hotlist: { tw: EMPTY_HOTDATA },
+  loading: { news: true, summary: true, keywords: true, hotlist: true },
   error: {},
-  building: { tw: false, intl: false },
+  building: false,
 }
 
 interface Progress {
@@ -72,13 +69,13 @@ export default function HomePage() {
     const qs = force ? '&force=1' : ''
     setState(prev => ({
       ...prev,
-      loading: { tw: true, intl: true, summary: true, keywords: true, hotlist: true },
+      loading: { news: true, summary: true, keywords: true, hotlist: true },
       error: {},
-      building: { tw: false, intl: false },
+      building: false,
     }))
     setProgress({ pct: 10, label: '正在抓取最新新聞…' })
 
-    // Fetch news first so hotlist/keywords can reuse the populated cache
+    // Fetch tw + intl news in parallel; merge into one list
     const [twData, intlData] = await Promise.all([
       safeFetch(`/api/news?tab=${activeTab}&col=tw${qs}`),
       safeFetch(`/api/news?tab=${activeTab}&col=intl${qs}`),
@@ -94,29 +91,23 @@ export default function HomePage() {
 
     const twItems: NewsItem[]   = twData?.items   ?? []
     const intlItems: NewsItem[] = intlData?.items  ?? []
-    const twFailed   = twData?._status !== undefined
-    const intlFailed = intlData?._status !== undefined
+    const newsFailed = twData?._status !== undefined && intlData?._status !== undefined
+
+    // Merge and sort all news by date descending
+    const allItems: NewsItem[] = [...twItems, ...intlItems].sort(
+      (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    )
 
     setState(prev => ({
       ...prev,
-      twNews: twItems,
-      intlNews: intlItems,
-      summary:   summaryData?.data    ?? null,
-      keywords:  keywordsData?.keywords ?? [],
-      hotlist: {
-        tw:   hotlistData?.tw   ?? EMPTY_HOTDATA,
-        intl: hotlistData?.intl ?? EMPTY_HOTDATA,
-      },
+      allNews: allItems,
+      summary:  summaryData?.data      ?? null,
+      keywords: keywordsData?.keywords ?? [],
+      hotlist:  { tw: hotlistData?.tw  ?? EMPTY_HOTDATA },
       updatedAt: twData?.updatedAt,
-      loading: { tw: false, intl: false, summary: false, keywords: false, hotlist: false },
-      building: {
-        tw:   !twFailed && twItems.length === 0,
-        intl: !intlFailed && intlItems.length === 0,
-      },
-      error: {
-        tw:   twFailed   ? '台灣新聞暫時無法載入，請稍後再試' : undefined,
-        intl: intlFailed ? '國際新聞暫時無法載入，請稍後再試' : undefined,
-      },
+      loading: { news: false, summary: false, keywords: false, hotlist: false },
+      building: !newsFailed && allItems.length === 0,
+      error: { news: newsFailed ? '新聞暫時無法載入，請稍後再試' : undefined },
     }))
     setProgress({ pct: 100, label: '載入完成' })
     setTimeout(() => setProgress(null), 800)
@@ -138,6 +129,7 @@ export default function HomePage() {
   }
 
   const isLoading = Object.values(state.loading).some(Boolean)
+  const newsLoading = state.loading.news
 
   return (
     <div className="min-h-screen bg-[#F7F5F0]">
@@ -173,7 +165,6 @@ export default function HomePage() {
         {/* 熱門排行 */}
         <HotList
           tw={state.hotlist.tw}
-          intl={state.hotlist.intl}
           loading={state.loading.hotlist}
           tab={tab}
         />
@@ -199,29 +190,16 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* 雙欄新聞 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <NewsColumn
-            title="台灣輿情"
-            subtitle="台灣主流媒體 · Google News · NewsAPI"
-            items={state.twNews}
-            loading={state.loading.tw}
-            error={state.error.tw}
-            building={state.building.tw}
-            selectedKeyword={selectedKeyword}
-          />
-          <div className="md:border-l md:border-[#E8E4DC] md:pl-8">
-            <NewsColumn
-              title="國際視角"
-              subtitle="Google News 國際 · GDELT 全球媒體"
-              items={state.intlNews}
-              loading={state.loading.intl}
-              error={state.error.intl}
-              building={state.building.intl}
-              selectedKeyword={selectedKeyword}
-            />
-          </div>
-        </div>
+        {/* 單欄新聞（台灣 + 國際合併，可用「國際」分類篩選） */}
+        <NewsColumn
+          title="台灣輿情"
+          subtitle="台灣主流媒體 · Google News · NewsAPI · GDELT"
+          items={state.allNews}
+          loading={newsLoading}
+          error={state.error.news}
+          building={state.building}
+          selectedKeyword={selectedKeyword}
+        />
       </main>
 
       <footer className="max-w-7xl mx-auto px-4 sm:px-6 py-8 mt-4 border-t border-[#E8E4DC] space-y-2">

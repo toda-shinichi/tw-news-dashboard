@@ -12,7 +12,6 @@ interface HotData {
 
 interface HotListProps {
   tw: HotData
-  intl: HotData
   loading?: boolean
   tab: TabRange
 }
@@ -92,9 +91,9 @@ function HotColumn({ label, data, loading }: { label: string; data: HotData; loa
   )
 }
 
-export default function HotList({ tw, intl, loading, tab }: HotListProps) {
+export default function HotList({ tw, loading, tab }: HotListProps) {
   const [selectedCat, setSelectedCat] = useState<NewsCategory>('all')
-  const [catData, setCatData] = useState<{ tw: HotData; intl: HotData } | null>(null)
+  const [catData, setCatData] = useState<HotData | null>(null)
   const [catLoading, setCatLoading] = useState(false)
 
   useEffect(() => {
@@ -107,22 +106,20 @@ export default function HotList({ tw, intl, loading, tab }: HotListProps) {
     fetch(`/api/hotlist?tab=${tab}&cat=${selectedCat}`)
       .then(r => r.json())
       .then(d => {
-        if (!cancelled) setCatData({ tw: d.tw, intl: d.intl })
+        if (!cancelled) setCatData(d.tw ?? null)
       })
       .catch(() => {})
       .finally(() => { if (!cancelled) setCatLoading(false) })
     return () => { cancelled = true }
   }, [selectedCat, tab])
 
-  // Also reset cat data when tab changes (different time range = different data)
   useEffect(() => {
     setCatData(null)
     setSelectedCat('all')
   }, [tab])
 
-  const displayTw   = catData?.tw   ?? tw
-  const displayIntl = catData?.intl ?? intl
-  const isLoading   = catLoading || loading
+  const displayTw = catData ?? tw
+  const isLoading = catLoading || loading
 
   return (
     <div className="bg-white border border-[#E8E4DC] rounded-xl p-5">
@@ -149,12 +146,7 @@ export default function HotList({ tw, intl, loading, tab }: HotListProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <HotColumn label="台灣" data={displayTw}   loading={isLoading} />
-        <div className="md:border-l md:border-[#E8E4DC] md:pl-8">
-          <HotColumn label="國際" data={displayIntl} loading={isLoading} />
-        </div>
-      </div>
+      <HotColumn label="台灣新聞" data={displayTw} loading={isLoading} />
     </div>
   )
 }

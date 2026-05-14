@@ -18,11 +18,14 @@ interface NewsColumnProps {
   selectedKeyword?: string | null
 }
 
-const CATEGORY_TABS: { value: NewsCategory; label: string }[] = [
-  { value: 'all', label: '全部' },
+type FilterValue = NewsCategory | 'intl'
+
+const CATEGORY_TABS: { value: FilterValue; label: string }[] = [
+  { value: 'all',      label: '全部' },
   { value: 'politics', label: '政治' },
-  { value: 'society', label: '社會' },
-  { value: 'life', label: '民生' },
+  { value: 'society',  label: '社會' },
+  { value: 'life',     label: '民生' },
+  { value: 'intl',     label: '國際' },
 ]
 
 const LIFE_CATS = new Set(['life', 'entertainment', 'finance', 'tech'])
@@ -36,12 +39,14 @@ export default function NewsColumn({
   building,
   selectedKeyword,
 }: NewsColumnProps) {
-  const [selectedCat, setSelectedCat] = useState<NewsCategory>('all')
+  const [selectedCat, setSelectedCat] = useState<FilterValue>('all')
   const [page, setPage] = useState(1)
 
   const filteredItems = useMemo(() => {
     let result = items
-    if (selectedCat !== 'all') {
+    if (selectedCat === 'intl') {
+      result = result.filter(item => item.column === 'intl')
+    } else if (selectedCat !== 'all') {
       result = result.filter(item =>
         selectedCat === 'life'
           ? LIFE_CATS.has(item.category ?? '')
