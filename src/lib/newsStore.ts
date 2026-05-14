@@ -65,13 +65,17 @@ async function fetchFresh(col: NewsColumn, isBackfill: boolean): Promise<NewsIte
   }
 }
 
+// readOnly=true: return cached data as-is, never trigger a fresh fetch.
+// Used by hotlist/keywords routes so they don't pile on top of the news fetch.
 export async function getAccumulatedNews(
   col: NewsColumn,
   tab: TabRange,
-  force = false
+  force = false,
+  readOnly = false
 ): Promise<NewsItem[]> {
-  const accKey = `news:acc:${col}`
-  const tsKey  = `news:fetch:${col}`
+  const accKey  = `news:acc:${col}`
+  const tsKey   = `news:fetch:${col}`
+  const lockKey = `news:lock:${col}`
 
   const [existing, lastFetchAt] = await Promise.all([
     cacheGet<NewsItem[]>(accKey),
@@ -79,24 +83,32 @@ export async function getAccumulatedNews(
   ])
 
   const isBackfill = !existing || existing.length === 0
-  const needsFetch = force || isBackfill || !lastFetchAt || Date.now() - lastFetchAt > FETCH_INTERVAL_MS
+  const needsFetch = !readOnly && (force || isBackfill || !lastFetchAt || Date.now() - lastFetchAt > FETCH_INTERVAL_MS)
   let items: NewsItem[] = existing ?? []
 
   if (needsFetch) {
-    try {
-      const fresh = await fetchFresh(col, isBackfill)
-      const categorized = fresh.map(item => ({
-        ...item,
-        category: item.category ?? classifyCategory(item.title, col),
-      }))
-      items = mergeStore(categorized, items)
-      await Promise.all([
-        cacheSet(accKey, items, TTL),
-        cacheSet(tsKey, Date.now(), TTL),
-      ])
-    } catch {
-      // keep existing items on fetch failure
+    // Only one concurrent fetch per column
+    const isLocked = await cacheGet<boolean>(lockKey)
+    if (!isLocked) {
+      await cacheSet(lockKey, true, 90) // 90-second lock TTL
+      try {
+        const fresh = await fetchFresh(col, isBackfill)
+        const categorized = fresh.map(item => ({
+          ...item,
+          category: item.category ?? classifyCategory(item.title, col),
+        }))
+        items = mergeStore(categorized, items)
+        await Promise.all([
+          cacheSet(accKey, items, TTL),
+          cacheSet(tsKey, Date.now(), TTL),
+        ])
+      } catch {
+        // keep existing items on fetch failure
+      } finally {
+        await cacheSet(lockKey, false, 1)
+      }
     }
+    // If locked, another fetch is in flight — return stale data immediately
   }
 
   return filterByDateRange(items, tab)

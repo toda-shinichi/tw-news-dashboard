@@ -25,8 +25,8 @@ export async function GET(req: NextRequest) {
   }
 
   const [twItems, intlItems] = await Promise.all([
-    getAccumulatedNews('tw', tab, force),
-    getAccumulatedNews('intl', tab, force),
+    getAccumulatedNews('tw', tab, force, true),
+    getAccumulatedNews('intl', tab, force, true),
   ])
 
   const [twHot, intlHot] = await Promise.all([

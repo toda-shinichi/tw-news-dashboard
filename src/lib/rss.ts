@@ -261,7 +261,7 @@ async function fetchOneFeed(source: RSSSource): Promise<NewsItem[]> {
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
       },
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(5000),
     })
     if (!resp.ok) return []
     const xml = await resp.text()

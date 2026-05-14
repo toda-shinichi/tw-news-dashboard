@@ -1,7 +1,8 @@
 import OpenAI from 'openai'
 import { NewsItem, SentimentLabel, SummaryData } from '@/types'
 
-const MODEL = 'gpt-5.5'
+const MODEL_QUALITY = 'gpt-5.5'       // summary: needs best quality
+const MODEL_FAST    = 'gpt-5.4-mini-as' // hotlist/keywords: speed matters
 
 function getClient(): OpenAI {
   return new OpenAI({
@@ -30,7 +31,7 @@ export async function analyzeSentiment(
 
     try {
       const resp = await client.chat.completions.create({
-        model: MODEL,
+        model: MODEL_FAST,
         messages: [
           // few-shot example to enforce JSON output
           {
@@ -103,7 +104,7 @@ export async function generateSummary(items: NewsItem[]): Promise<SummaryData> {
 
   try {
     const resp = await client.chat.completions.create({
-      model: MODEL,
+      model: MODEL_QUALITY,
       messages: [
         {
           role: 'user',
@@ -117,7 +118,7 @@ export async function generateSummary(items: NewsItem[]): Promise<SummaryData> {
         },
         {
           role: 'user',
-          content: `你是台灣輿情分析師。分析以下新聞標題，用繁體中文只輸出 JSON，不要其他文字。\n格式：{"overview":"整體輿情2-3句含情緒判讀","topics":["當前五大議題（15字以內）"],"brewing":["正在醞釀的3個動向，說明往哪個方向發展（30字以內）"],"upcoming":["2-3個即將可能升溫的話題及原因（30字以內）"],"longterm":["2-3個長期需關注的重要議題（25字以內）"],"people":["當前最受關注的4-6位人物姓名"],"viral":["2-3個在社群媒體上最具擴散潛力的話題，說明為何容易引發轉傳或討論（30字以內）"],"alerts":["今日需特別注意的2-3個警示：潛在危機、爭議升溫或緊張情勢（40字以內，含具體說明）"]}\n新聞標題：\n${titles}\n輸出：`,
+          content: `你是台灣社群輿情分析師，熟悉 PTT、Dcard、Instagram、Threads、YouTube 台灣社群的討論生態。分析以下新聞標題，用繁體中文只輸出 JSON，不要其他文字。\n格式：{"overview":"整體輿情2-3句含情緒判讀","topics":["當前五大議題（15字以內）"],"brewing":["正在醞釀的3個動向，說明往哪個方向發展（30字以內）"],"upcoming":["2-3個即將可能升溫的話題及原因（30字以內）"],"longterm":["2-3個長期需關注的重要議題（25字以內）"],"people":["當前最受關注的4-6位人物姓名"],"viral":["根據台灣社群生態（PTT八卦板、Dcard、IG、Threads），評估2-3個最可能在這些平台引爆討論的話題：說明哪個族群會討論、討論走向及潛在爭議點（40字以內）"],"alerts":["今日需特別注意的2-3個警示：潛在危機、爭議升溫或緊張情勢（40字以內，含具體說明）"]}\n新聞標題：\n${titles}\n輸出：`,
         },
       ],
       temperature: 0.3,
@@ -158,7 +159,7 @@ export async function extractKeywords(
 
   try {
     const resp = await client.chat.completions.create({
-      model: MODEL,
+      model: MODEL_FAST,
       messages: [
         // few-shot to enforce JSON array output
         {
@@ -211,7 +212,7 @@ export async function extractHotList(
 
   try {
     const resp = await client.chat.completions.create({
-      model: MODEL,
+      model: MODEL_FAST,
       messages: [
         {
           role: 'user',
