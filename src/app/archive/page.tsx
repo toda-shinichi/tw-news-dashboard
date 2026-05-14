@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import clsx from 'clsx'
 import { NewsItem, TabRange } from '@/types'
@@ -198,14 +199,17 @@ function HistoryPanel() {
 
 type PageTab = 'news' | 'history'
 
-export default function ArchivePage() {
+function ArchiveContent() {
+  const searchParams = useSearchParams()
+  const initQ = searchParams.get('q') ?? ''
+
   const [pageTab, setPageTab] = useState<PageTab>('news')
 
-  const [tab,   setTab]   = useState<TabRange>('week')
+  const [tab,   setTab]   = useState<TabRange>('month')
   const [col,   setCol]   = useState('tw')
   const [cat,   setCat]   = useState('')
-  const [q,     setQ]     = useState('')
-  const [input, setInput] = useState('')
+  const [q,     setQ]     = useState(initQ)
+  const [input, setInput] = useState(initQ)
 
   const [items,      setItems]      = useState<NewsItem[]>([])
   const [page,       setPage]       = useState(1)
@@ -437,5 +441,13 @@ export default function ArchivePage() {
         )}
       </main>
     </div>
+  )
+}
+
+export default function ArchivePage() {
+  return (
+    <Suspense>
+      <ArchiveContent />
+    </Suspense>
   )
 }
