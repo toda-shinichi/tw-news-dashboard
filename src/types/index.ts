@@ -19,6 +19,10 @@ export interface NewsResponse {
   items: NewsItem[]
   updatedAt: string
   fromCache: boolean
+  total?: number
+  page?: number
+  limit?: number
+  totalPages?: number
 }
 
 export interface SummaryData {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 
 const SOURCES = [
   {
@@ -55,6 +56,15 @@ export default function Header({ updatedAt, onRefresh, refreshing }: HeaderProps
               更新：{new Date(updatedAt).toLocaleString('zh-TW')}
             </span>
           )}
+
+          {/* Archive link */}
+          <Link
+            href="/archive"
+            className="text-xs text-[#888888] hover:text-[#5B7FA6] transition-colors hidden sm:block"
+            title="新聞存檔"
+          >
+            存檔
+          </Link>
 
           {/* Sources info button */}
           <div className="relative">
