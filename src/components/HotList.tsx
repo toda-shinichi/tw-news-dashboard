@@ -118,13 +118,11 @@ function HotColumn({
             <TagRow items={displayKeywords} loading={loading} />
           </div>
 
-          {/* 五大人物 — 僅在全部 tab 顯示（AI 結果） */}
-          {!isFiltered && (
-            <div>
-              <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大人物</p>
-              <TagRow items={displayPeople} loading={loading} />
-            </div>
-          )}
+          {/* 五大人物 */}
+          <div>
+            <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大人物</p>
+            <TagRow items={displayPeople} loading={loading} />
+          </div>
         </>
       )}
     </div>

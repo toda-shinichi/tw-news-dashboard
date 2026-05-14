@@ -27,6 +27,8 @@ export interface SummaryData {
   brewing: string[]
   upcoming: string[]
   longterm: string[]
+  people: string[]
+  alerts: string[]
 }
 
 export interface SummaryResponse {

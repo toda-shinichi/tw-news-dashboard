@@ -6,7 +6,7 @@ interface SummaryBannerProps {
 }
 
 interface SectionConfig {
-  key: keyof Pick<SummaryData, 'topics' | 'brewing' | 'upcoming' | 'longterm'>
+  key: keyof Pick<SummaryData, 'topics' | 'brewing' | 'upcoming' | 'longterm' | 'alerts'>
   title: string
   accent: string
   bg: string
@@ -18,6 +18,7 @@ const SECTIONS: SectionConfig[] = [
   { key: 'brewing',  title: '醞釀中的動向', accent: '#D4874A', bg: '#FDF4EC' },
   { key: 'upcoming', title: '即將升溫話題', accent: '#C0554A', bg: '#FDF0EF' },
   { key: 'longterm', title: '長期觀察重點', accent: '#7A62A8', bg: '#F2EFF8' },
+  { key: 'alerts',   title: '今日警示',     accent: '#B84040', bg: '#FDF0EF' },
 ]
 
 function Section({ title, items, accent, bg, numbered }: SectionConfig & { items: string[] }) {
@@ -55,6 +56,27 @@ function Section({ title, items, accent, bg, numbered }: SectionConfig & { items
           ))}
         </ul>
       )}
+    </div>
+  )
+}
+
+function PeopleRow({ people }: { people: string[] }) {
+  if (people.length === 0) return null
+  return (
+    <div className="rounded-lg p-4 bg-[#EFF6F2]" style={{ borderLeft: '3px solid #4A8870' }}>
+      <p className="text-[10px] font-semibold uppercase tracking-widest mb-3 text-[#4A8870]">
+        當前話題人物
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {people.map((name, i) => (
+          <span
+            key={i}
+            className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-white border border-[#4A8870]/30 text-[#2C5243]"
+          >
+            {name}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }
@@ -102,10 +124,13 @@ export default function SummaryBanner({ data, loading }: SummaryBannerProps) {
             {data.overview}
           </p>
 
-          {/* 四格分析 */}
+          {/* 當前話題人物 */}
+          {data.people?.length > 0 && <PeopleRow people={data.people} />}
+
+          {/* 五格分析 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {SECTIONS.map(({ key, ...rest }) => (
-              <Section key={key} {...rest} items={data[key]} />
+              <Section key={key} {...rest} items={data[key] ?? []} />
             ))}
           </div>
         </div>
