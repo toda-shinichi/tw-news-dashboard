@@ -46,11 +46,17 @@ const INITIAL_STATE: PageState = {
   building: { tw: false, intl: false },
 }
 
+interface Progress {
+  pct: number
+  label: string
+}
+
 export default function HomePage() {
   const [tab, setTab] = useState<TabRange>('today')
   const [state, setState] = useState<PageState>(INITIAL_STATE)
   const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [progress, setProgress] = useState<Progress | null>({ pct: 5, label: '正在抓取新聞…' })
 
   const safeFetch = useCallback(async (url: string) => {
     try {
@@ -70,12 +76,15 @@ export default function HomePage() {
       error: {},
       building: { tw: false, intl: false },
     }))
+    setProgress({ pct: 10, label: '正在抓取最新新聞…' })
 
     // Fetch news first so hotlist/keywords can reuse the populated cache
     const [twData, intlData] = await Promise.all([
       safeFetch(`/api/news?tab=${activeTab}&col=tw${qs}`),
       safeFetch(`/api/news?tab=${activeTab}&col=intl${qs}`),
     ])
+
+    setProgress({ pct: 55, label: 'AI 正在分析輿情…' })
 
     const [summaryData, keywordsData, hotlistData] = await Promise.all([
       safeFetch(`/api/summary?tab=${activeTab}${qs}`),
@@ -100,7 +109,6 @@ export default function HomePage() {
       },
       updatedAt: twData?.updatedAt,
       loading: { tw: false, intl: false, summary: false, keywords: false, hotlist: false },
-      // building = server responded but store is empty (still fetching feeds)
       building: {
         tw:   !twFailed && twItems.length === 0,
         intl: !intlFailed && intlItems.length === 0,
@@ -110,6 +118,8 @@ export default function HomePage() {
         intl: intlFailed ? '國際新聞暫時無法載入，請稍後再試' : undefined,
       },
     }))
+    setProgress({ pct: 100, label: '載入完成' })
+    setTimeout(() => setProgress(null), 800)
   }, [safeFetch])
 
   useEffect(() => {
@@ -127,8 +137,29 @@ export default function HomePage() {
     setTab(newTab)
   }
 
+  const isLoading = Object.values(state.loading).some(Boolean)
+
   return (
     <div className="min-h-screen bg-[#F7F5F0]">
+      {/* Top progress bar */}
+      {(progress || isLoading) && (
+        <div className="fixed top-0 left-0 right-0 z-50 pointer-events-none">
+          <div className="h-[3px] bg-[#E8E4DC]">
+            <div
+              className="h-full bg-[#5B7FA6] transition-all duration-500 ease-out"
+              style={{ width: `${progress?.pct ?? 5}%` }}
+            />
+          </div>
+          {progress && (
+            <div className="flex justify-center mt-1.5">
+              <span className="text-[11px] font-medium text-[#5B7FA6] bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-[#E8E4DC]">
+                {progress.label}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       <Header
         updatedAt={state.updatedAt}
         onRefresh={handleRefresh}
