@@ -29,49 +29,44 @@ const CATEGORY_TABS: { value: NewsCategory; label: string }[] = [
   { value: 'life', label: '民生' },
 ]
 
-function RankedList({ items, loading, color = '#5B7FA6' }: { items: string[]; loading?: boolean; color?: string }) {
+function RankedList({ items, loading }: { items: string[]; loading?: boolean }) {
   if (loading) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-5 bg-[#EFECE5] rounded animate-pulse" style={{ width: `${60 + i * 8}%` }} />
+          <div key={i} className="h-4 bg-[#EFECE5] rounded animate-pulse" style={{ width: `${60 + i * 7}%` }} />
         ))}
       </div>
     )
   }
-  if (items.length === 0) return <p className="text-xs text-[#888888]">資料不足</p>
+  if (items.length === 0) return <p className="text-xs text-[#AAAAAA]">資料不足</p>
   return (
     <ol className="space-y-1.5">
       {items.map((item, i) => (
         <li key={i} className="flex items-start gap-2">
-          <span className="text-xs font-semibold w-4 flex-shrink-0 mt-0.5" style={{ color }}>
-            {i + 1}
-          </span>
-          <span className="text-xs text-[#2C2C2C] leading-snug">{item}</span>
+          <span className="text-xs font-semibold text-[#5B7FA6] w-4 flex-shrink-0 mt-0.5">{i + 1}</span>
+          <span className="text-sm text-[#2C2C2C] leading-snug">{item}</span>
         </li>
       ))}
     </ol>
   )
 }
 
-function TagList({ items, loading }: { items: string[]; loading?: boolean }) {
+function TagRow({ items, loading }: { items: string[]; loading?: boolean }) {
   if (loading) {
     return (
-      <div className="space-y-2">
+      <div className="flex gap-1.5 flex-wrap">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-5 bg-[#EFECE5] rounded animate-pulse" style={{ width: `${50 + i * 5}%` }} />
+          <div key={i} className="h-5 w-14 bg-[#EFECE5] rounded-full animate-pulse" />
         ))}
       </div>
     )
   }
-  if (items.length === 0) return <p className="text-xs text-[#888888]">資料不足</p>
+  if (items.length === 0) return <span className="text-xs text-[#AAAAAA]">資料不足</span>
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map((item, i) => (
-        <span
-          key={i}
-          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-[#EBF0F7] text-[#3D5A7A] font-medium"
-        >
+        <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-[#EBF0F7] text-[#3D5A7A] font-medium">
           {item}
         </span>
       ))}
@@ -98,43 +93,40 @@ function HotColumn({
   )
 
   const displayTopics = isFiltered ? computed : data.topics
-  const displayKeywords = isFiltered ? computed.slice(0, 5) : data.keywords
-  const displayPeople = isFiltered ? [] : data.people
+  const displayKeywords = isFiltered ? computed : data.keywords
+  const displayPeople = data.people
+
+  const noData = isFiltered && filteredTitles.length < 3
 
   return (
-    <div className="flex-1 min-w-0">
-      <p className="text-xs font-medium text-[#888888] uppercase tracking-widest mb-3">{label}</p>
+    <div className="flex-1 min-w-0 space-y-4">
+      <p className="text-xs font-medium text-[#888888] uppercase tracking-widest">{label}</p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
-          <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大議題</p>
-          <RankedList items={displayTopics} loading={loading} />
-        </div>
-        <div>
-          <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大關鍵字</p>
-          {loading ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-5 bg-[#EFECE5] rounded animate-pulse" style={{ width: `${50 + i * 5}%` }} />
-              ))}
+      {noData ? (
+        <p className="text-sm text-[#AAAAAA]">此分類新聞量不足，請切換至「全部」查看 AI 分析結果。</p>
+      ) : (
+        <>
+          {/* 五大議題 */}
+          <div>
+            <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大議題</p>
+            <RankedList items={displayTopics} loading={loading} />
+          </div>
+
+          {/* 五大關鍵字 */}
+          <div>
+            <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大關鍵字</p>
+            <TagRow items={displayKeywords} loading={loading} />
+          </div>
+
+          {/* 五大人物 — 僅在全部 tab 顯示（AI 結果） */}
+          {!isFiltered && (
+            <div>
+              <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大人物</p>
+              <TagRow items={displayPeople} loading={loading} />
             </div>
-          ) : (
-            <TagList items={displayKeywords} />
           )}
-        </div>
-        <div>
-          <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大人物</p>
-          {loading ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-5 bg-[#EFECE5] rounded animate-pulse" style={{ width: `${45 + i * 5}%` }} />
-              ))}
-            </div>
-          ) : (
-            <TagList items={displayPeople} />
-          )}
-        </div>
-      </div>
+        </>
+      )}
     </div>
   )
 }
@@ -154,12 +146,10 @@ export default function HotList({ tw, intl, loading, twItems = [], intlItems = [
 
   return (
     <div className="bg-white border border-[#E8E4DC] rounded-xl p-5">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <span className="w-2 h-2 rounded-full bg-[#E8844A]" />
-          <span className="text-xs font-medium text-[#E8844A] uppercase tracking-widest">
-            熱門排行
-          </span>
+          <span className="text-xs font-medium text-[#E8844A] uppercase tracking-widest">熱門排行</span>
         </div>
         <div className="flex gap-1 flex-wrap">
           {CATEGORY_TABS.map(tab => (
@@ -179,7 +169,7 @@ export default function HotList({ tw, intl, loading, twItems = [], intlItems = [
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-6 md:gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <HotColumn
           label="台灣"
           data={tw}

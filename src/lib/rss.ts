@@ -231,6 +231,28 @@ const RSS_SOURCES: RSSSource[] = [
   },
 ]
 
+function decodeEntities(str: string): string {
+  return str
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+// Strip trailing " - Source Name" appended by aggregators/GN feeds
+function cleanTitle(raw: string): string {
+  return raw
+    .replace(/<!\[CDATA\[|\]\]>/g, '')
+    .replace(/\s*[-–—]\s*[^\-–—]{2,50}(網|報|社|台|通訊|頻道|媒體)$/u, '')
+    .trim()
+}
+
 async function fetchOneFeed(source: RSSSource): Promise<NewsItem[]> {
   try {
     const resp = await fetch(source.url, {
@@ -256,19 +278,17 @@ async function fetchOneFeed(source: RSSSource): Promise<NewsItem[]> {
 
     return rawItems
       .map((item: Record<string, string>) => {
-        const title = String(item.title || '')
-          .replace(/<!\[CDATA\[|\]\]>/g, '')
-          .trim()
+        const title = cleanTitle(String(item.title || ''))
         const url = String(item.link || item.guid || '')
         if (!title || !url) return null
         const pubDate = item.pubDate || item['dc:date'] || new Date().toISOString()
         const rawDesc = String(item.description || '')
         const summary =
-          rawDesc
-            .replace(/<[^>]+>/g, '')
-            .replace(/<!\[CDATA\[|\]\]>/g, '')
-            .trim()
-            .slice(0, 200) || undefined
+          decodeEntities(
+            rawDesc
+              .replace(/<[^>]+>/g, '')
+              .replace(/<!\[CDATA\[|\]\]>/g, '')
+          ).slice(0, 200) || undefined
 
         return {
           id: hashString(title + url),
