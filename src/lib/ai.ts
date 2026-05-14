@@ -1,8 +1,8 @@
 import OpenAI from 'openai'
 import { NewsItem, SentimentLabel, SummaryData } from '@/types'
 
-const MODEL_QUALITY = 'gpt-5.5'       // summary: needs best quality
-const MODEL_FAST    = 'gpt-5.4-mini-as' // hotlist/keywords: speed matters
+const MODEL_QUALITY = 'kimi-k2'
+const MODEL_FAST    = 'kimi-k2'
 
 function getClient(): OpenAI {
   return new OpenAI({
