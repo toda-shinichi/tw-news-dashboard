@@ -95,9 +95,19 @@ export async function getAccumulatedNews(
         const fresh = await fetchFresh(col, isBackfill)
         const categorized = fresh.map(item => ({
           ...item,
-          category: item.category ?? classifyCategory(item.title, col),
+          // Always re-classify fresh items (overwrite defaultCategory too, since
+          // the classifier is authoritative and defaultCategory was just a hint)
+          category: classifyCategory(item.title, col),
         }))
-        items = mergeStore(categorized, items)
+        let merged = mergeStore(categorized, items)
+        if (force) {
+          // Re-classify the entire store so stale wrong categories are fixed immediately
+          merged = merged.map(item => ({
+            ...item,
+            category: classifyCategory(item.title, col),
+          }))
+        }
+        items = merged
         await Promise.all([
           cacheSet(accKey, items, TTL),
           cacheSet(tsKey, Date.now(), TTL),

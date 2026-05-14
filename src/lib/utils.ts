@@ -98,13 +98,16 @@ const SHARED_RULES = [
   {
     cat: 'society' as NewsCategory,
     words: [
-      '警察', '犯罪', '刑事', '事故', '火災', '地震', '颱風', '教育', '環保', '環境',
+      '警察', '警方', '犯罪', '刑事', '事故', '火災', '地震', '颱風', '教育', '環保', '環境',
       '法院', '判決', '詐騙', '毒品', '校園', '治安', '公安', '搜救', '失蹤', '命案',
       '傷亡', '死亡', '受傷', '意外', '車禍', '墜落', '溺水', '爆炸', '漏氣',
       '性騷擾', '性侵', '家暴', '兒虐', '霸凌', '自殺',
       '環境污染', '廢水', '廢氣', '垃圾', '回收', '節能', '氣候',
       '司法', '檢察', '起訴', '逮捕', '搜索', '羈押', '假釋', '緩刑',
       '示威', '抗議', '遊行', '罷工', '陳情',
+      // 刑案相關
+      '嫌疑', '涉嫌', '偵查', '被告', '嫌犯', '通緝', '遇害', '受害', '暴力',
+      '違法', '非法', '詐欺', '竊盜', '搶奪', '縱火', '槍擊', '傷人',
     ],
   },
 ]
@@ -112,14 +115,18 @@ const SHARED_RULES = [
 // Taiwan domestic political keywords — used for tw-column classification
 const DOMESTIC_POLITICS = [
   // 機構
-  '立法院', '行政院', '總統府', '監察院', '考試院', '司法院',
+  '立法院', '行政院', '總統府', '監察院', '考試院', '司法院', '國安會',
   // 選舉 / 政黨
   '選舉', '補選', '罷免', '公投', '政黨', '執政', '在野',
   '民進黨', '國民黨', '台灣民眾黨', '民眾黨', '時代力量', '台灣基進',
-  // 職稱
+  // 職稱與角色
   '縣市長', '縣長', '市長', '鄉長', '里長', '區長', '議員', '議會', '議長',
   '立委', '黨團', '院會', '地方政府', '縣政府', '市政府', '政務官', '公務員',
-  '黨主席', '總召', '幹事長', '中執會', '選區',
+  '黨主席', '總召', '幹事長', '中執會', '選區', '部長', '次長', '署長', '局長',
+  // 常見政治動詞/名詞
+  '政策', '政府', '法案', '修法', '立法', '審議', '施政', '預算案', '預算',
+  '黨紀', '黨章', '弊案', '貪污', '民調', '行政命令', '質詢', '朝野',
+  '執政黨', '在野黨', '台灣政治',
   // 重要人物（現任 + 近期活躍）
   '賴清德', '蕭美琴',                        // 正副總統
   '朱立倫', '韓國瑜', '侯友宜',              // 國民黨
@@ -128,8 +135,7 @@ const DOMESTIC_POLITICS = [
   '高虹安', '李四川', '謝國樑',              // 各地首長
   '鄭麗文', '黃世杰', '沈伯洋',              // 立委
   '蘇巧慧', '張雅琳', '陳品安', '童子瑋',   // 立委
-  // 事件詞
-  '弊案', '貪污', '施政', '預算案', '黨紀', '黨章', '台灣政治',
+  '卓榮泰', '鄭麗君', '陳建仁',              // 行政院
 ]
 
 // International political keywords — added on top for intl-column or uncolumned items
@@ -188,7 +194,9 @@ export function classifyCategory(title: string, column?: string): NewsCategory {
   let bestScore = 0
   for (const { cat, words } of rules) {
     const score = words.filter(w => title.includes(w)).length
-    if (score > bestScore) {
+    // `>=` so later-evaluated categories (society, politics) override earlier ones (life) on ties
+    // Rules order: life → society → politics, meaning politics has highest effective priority
+    if (score > 0 && score >= bestScore) {
       bestScore = score
       best = cat
     }
