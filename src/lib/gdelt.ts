@@ -34,20 +34,19 @@ export function getGDELTTimespan(tab: string): string {
   }
 }
 
-export async function fetchGDELT(timespan = '1d'): Promise<NewsItem[]> {
+async function gdeltFetch(query: string, timespan: string, column: 'tw' | 'intl', maxrecords = 50): Promise<NewsItem[]> {
   const url = new URL('https://api.gdeltproject.org/api/v2/doc/doc')
-  url.searchParams.set('query', 'Taiwan sourcelang:english')
+  url.searchParams.set('query', query)
   url.searchParams.set('mode', 'artlist')
-  url.searchParams.set('maxrecords', '25')
+  url.searchParams.set('maxrecords', String(maxrecords))
   url.searchParams.set('format', 'json')
   url.searchParams.set('timespan', timespan)
   url.searchParams.set('sort', 'hybridrel')
 
   try {
-    const resp = await fetch(url.toString(), { signal: AbortSignal.timeout(10000) })
+    const resp = await fetch(url.toString(), { signal: AbortSignal.timeout(15000) })
     if (!resp.ok) return []
     const data = await resp.json()
-
     return (data.articles || [])
       .map((a: GDELTArticle) => {
         if (!a.title || !a.url) return null
@@ -57,11 +56,20 @@ export async function fetchGDELT(timespan = '1d'): Promise<NewsItem[]> {
           url: a.url,
           source: a.domain || 'GDELT',
           publishedAt: parseGDELTDate(a.seendate),
-          column: 'intl' as const,
+          column,
         } as NewsItem
       })
       .filter((item: NewsItem | null): item is NewsItem => item !== null)
   } catch {
     return []
   }
+}
+
+export async function fetchGDELT(timespan = '1d'): Promise<NewsItem[]> {
+  return gdeltFetch('Taiwan sourcelang:english', timespan, 'intl', 50)
+}
+
+// GDELT also indexes many Traditional Chinese Taiwanese news sources
+export async function fetchGDELTTaiwan(timespan = '1d'): Promise<NewsItem[]> {
+  return gdeltFetch('台灣 OR Taiwan sourcecountry:TW', timespan, 'tw', 50)
 }

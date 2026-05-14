@@ -1,7 +1,7 @@
 import { cacheGet, cacheSet } from './cache'
 import { fetchAllRSS } from './rss'
 import { fetchNewsAPI } from './newsapi'
-import { fetchGDELT } from './gdelt'
+import { fetchGDELT, fetchGDELTTaiwan } from './gdelt'
 import { filterByDateRange, classifyCategory } from './utils'
 import { NewsItem, NewsColumn, TabRange } from '@/types'
 
@@ -23,6 +23,28 @@ function mergeStore(incoming: NewsItem[], existing: NewsItem[]): NewsItem[] {
     .slice(0, MAX_ITEMS)
 }
 
+async function fetchFresh(col: NewsColumn, isBackfill: boolean): Promise<NewsItem[]> {
+  // On first run (empty store), pull 30 days of history from GDELT so time tabs work immediately.
+  // Subsequent fetches only pull the latest day.
+  const gdeltSpan = isBackfill ? '30d' : '7d'
+
+  if (col === 'tw') {
+    const [rss, api, gdelt] = await Promise.all([
+      fetchAllRSS('tw'),
+      fetchNewsAPI(),
+      // GDELT indexes many TW Chinese-language sources — gives instant historical depth
+      fetchGDELTTaiwan(gdeltSpan),
+    ])
+    return [...rss, ...api, ...gdelt]
+  } else {
+    const [rss, gdelt] = await Promise.all([
+      fetchAllRSS('intl'),
+      fetchGDELT(gdeltSpan),
+    ])
+    return [...rss, ...gdelt]
+  }
+}
+
 export async function getAccumulatedNews(
   col: NewsColumn,
   tab: TabRange,
@@ -36,28 +58,17 @@ export async function getAccumulatedNews(
     cacheGet<number>(tsKey),
   ])
 
-  const needsFetch = force || !lastFetchAt || Date.now() - lastFetchAt > FETCH_INTERVAL_MS
+  const isBackfill = !existing || existing.length === 0
+  const needsFetch = force || isBackfill || !lastFetchAt || Date.now() - lastFetchAt > FETCH_INTERVAL_MS
   let items: NewsItem[] = existing ?? []
 
   if (needsFetch) {
     try {
-      let fresh: NewsItem[] = []
-      if (col === 'tw') {
-        const [rss, api] = await Promise.all([fetchAllRSS('tw'), fetchNewsAPI()])
-        fresh = [...rss, ...api]
-      } else {
-        const [rss, gdelt] = await Promise.all([
-          fetchAllRSS('intl'),
-          fetchGDELT('7d'),
-        ])
-        fresh = [...rss, ...gdelt]
-      }
-
+      const fresh = await fetchFresh(col, isBackfill)
       const categorized = fresh.map(item => ({
         ...item,
         category: item.category ?? classifyCategory(item.title, col),
       }))
-
       items = mergeStore(categorized, items)
       await Promise.all([
         cacheSet(accKey, items, TTL),
