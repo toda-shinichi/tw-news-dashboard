@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import { NewsItem, SentimentLabel } from '@/types'
+import { NewsItem, SentimentLabel, SummaryData } from '@/types'
 
 const MODEL = 'gpt-5.4-mini-as'
 
@@ -75,14 +75,26 @@ export async function analyzeSentiment(
   return result
 }
 
-export async function generateSummary(items: NewsItem[]): Promise<string> {
+const EMPTY_SUMMARY: SummaryData = {
+  overview: '',
+  topics: [],
+  brewing: [],
+  upcoming: [],
+  longterm: [],
+}
+
+export async function generateSummary(items: NewsItem[]): Promise<SummaryData> {
   if (!process.env.CPA_API_KEY)
-    return '目前無法產生 AI 輿情分析，請確認 CPA_API_KEY 環境變數設定。'
-  if (items.length === 0) return '此時段目前沒有足夠的新聞資料進行分析。'
+    return {
+      ...EMPTY_SUMMARY,
+      overview: '目前無法產生 AI 輿情分析，請確認 CPA_API_KEY 環境變數設定。',
+    }
+  if (items.length === 0)
+    return { ...EMPTY_SUMMARY, overview: '此時段目前沒有足夠的新聞資料進行分析。' }
 
   const client = getClient()
   const titles = items
-    .slice(0, 30)
+    .slice(0, 40)
     .map((item, i) => `${i + 1}. ${item.title}`)
     .join('\n')
 
@@ -92,21 +104,38 @@ export async function generateSummary(items: NewsItem[]): Promise<string> {
       messages: [
         {
           role: 'user',
-          content: `你是台灣新聞輿情分析師。根據以下新聞標題，撰寫 2–3 段繁體中文輿情總結（每段 2–4 句）。
-包含：整體情緒判讀（樂觀／悲觀／中性）、本期主要議題、值得關注的趨勢。語氣專業客觀。
-
-新聞標題：
-${titles}
-
-輿情總結：`,
+          content:
+            '你是台灣輿情分析師。分析標題，只輸出 JSON，不要其他文字。\n格式：{"overview":"...","topics":["..."],"brewing":["..."],"upcoming":["..."],"longterm":["..."]}\n標題：台積電宣布赴美擴廠、賴清德出訪歐洲、選舉民調公布、颱風警報發布、美中貿易談判。\n輸出：',
+        },
+        {
+          role: 'assistant',
+          content:
+            '{"overview":"本期輿情以科技外交為主軸，整體基調偏中性偏積極，台積電擴廠帶動產業信心，但颱風警報與選戰動態引發民生與政治的雙重關注。","topics":["台積電赴美擴廠動向","賴清德歐洲外交布局","選舉民調各黨消長","颱風防災緊急應對","美中貿易談判進展"],"brewing":["台積電擴廠引發的產業空洞化辯論正在業界發酵，供應鏈去台化疑慮持續升溫","賴清德出訪後北京極可能採取外交或軍事反制動作，兩岸緊張程度值得持續追蹤","選舉民調進入關鍵期，各黨策略將隨數字變動迅速調整"],"upcoming":["颱風若轉向台灣本島，將在 48 小時內引爆大規模民生與防災報導","選舉初選提名結果公布後，藍綠攻防預計全面升溫"],"longterm":["半導體供應鏈重組對台灣在全球分工角色的長遠影響","台美關係持續深化與兩岸對峙並存的戰略平衡挑戰"]}',
+        },
+        {
+          role: 'user',
+          content: `你是台灣輿情分析師。分析以下新聞標題，用繁體中文只輸出 JSON，不要其他文字。\n格式：{"overview":"整體輿情2-3句含情緒判讀","topics":["當前五大議題（15字以內）"],"brewing":["正在醞釀的3個動向，說明往哪個方向發展（30字以內）"],"upcoming":["2-3個即將可能升溫的話題及原因（30字以內）"],"longterm":["2-3個長期需關注的重要議題（25字以內）"]}\n新聞標題：\n${titles}\n輸出：`,
         },
       ],
       temperature: 0.3,
-      max_tokens: 600,
+      max_tokens: 900,
     })
-    return resp.choices[0]?.message?.content || '無法取得分析結果。'
+
+    const text = resp.choices[0]?.message?.content?.trim() || '{}'
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]) as SummaryData
+      return {
+        overview: parsed.overview || '',
+        topics: Array.isArray(parsed.topics) ? parsed.topics.slice(0, 5) : [],
+        brewing: Array.isArray(parsed.brewing) ? parsed.brewing.slice(0, 3) : [],
+        upcoming: Array.isArray(parsed.upcoming) ? parsed.upcoming.slice(0, 3) : [],
+        longterm: Array.isArray(parsed.longterm) ? parsed.longterm.slice(0, 3) : [],
+      }
+    }
+    return { ...EMPTY_SUMMARY, overview: '分析結果格式異常，請稍後再試。' }
   } catch {
-    return 'AI 分析服務暫時無法使用，請稍後再試。'
+    return { ...EMPTY_SUMMARY, overview: 'AI 分析服務暫時無法使用，請稍後再試。' }
   }
 }
 

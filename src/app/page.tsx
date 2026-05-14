@@ -7,7 +7,7 @@ import SummaryBanner from '@/components/SummaryBanner'
 import KeywordCloud from '@/components/KeywordCloud'
 import HotList from '@/components/HotList'
 import NewsColumn from '@/components/NewsColumn'
-import { TabRange, NewsItem } from '@/types'
+import { TabRange, NewsItem, SummaryData } from '@/types'
 
 interface HotData {
   topics: string[]
@@ -18,7 +18,7 @@ interface HotData {
 interface PageState {
   twNews: NewsItem[]
   intlNews: NewsItem[]
-  summary: string
+  summary: SummaryData | null
   keywords: Array<{ word: string; count: number }>
   hotlist: { tw: HotData; intl: HotData }
   updatedAt?: string
@@ -37,7 +37,7 @@ const EMPTY_HOTDATA: HotData = { topics: [], keywords: [], people: [] }
 const INITIAL_STATE: PageState = {
   twNews: [],
   intlNews: [],
-  summary: '',
+  summary: null,
   keywords: [],
   hotlist: { tw: EMPTY_HOTDATA, intl: EMPTY_HOTDATA },
   loading: { tw: true, intl: true, summary: true, keywords: true, hotlist: true },
@@ -75,7 +75,7 @@ export default function HomePage() {
       twNews: twRes.status === 'fulfilled' ? (twRes.value.items ?? []) : [],
       intlNews: intlRes.status === 'fulfilled' ? (intlRes.value.items ?? []) : [],
       summary:
-        summaryRes.status === 'fulfilled' ? (summaryRes.value.text ?? '') : '',
+        summaryRes.status === 'fulfilled' ? (summaryRes.value.data ?? null) : null,
       keywords:
         keywordsRes.status === 'fulfilled' ? (keywordsRes.value.keywords ?? []) : [],
       hotlist:
@@ -126,7 +126,7 @@ export default function HomePage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
         {/* AI 輿情摘要 */}
-        <SummaryBanner text={state.summary} loading={state.loading.summary} />
+        <SummaryBanner data={state.summary} loading={state.loading.summary} />
 
         {/* 熱門排行 */}
         <HotList

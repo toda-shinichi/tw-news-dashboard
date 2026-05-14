@@ -21,8 +21,16 @@ export interface NewsResponse {
   fromCache: boolean
 }
 
+export interface SummaryData {
+  overview: string
+  topics: string[]
+  brewing: string[]
+  upcoming: string[]
+  longterm: string[]
+}
+
 export interface SummaryResponse {
-  text: string
+  data: SummaryData
   generatedAt: string
   fromCache: boolean
 }
