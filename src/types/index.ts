@@ -28,6 +28,7 @@ export interface SummaryData {
   upcoming: string[]
   longterm: string[]
   people: string[]
+  viral: string[]
   alerts: string[]
 }
 

@@ -1,7 +1,7 @@
 import OpenAI from 'openai'
 import { NewsItem, SentimentLabel, SummaryData } from '@/types'
 
-const MODEL = 'gpt-5.4-mini-as'
+const MODEL = 'gpt-5.5'
 
 function getClient(): OpenAI {
   return new OpenAI({
@@ -82,6 +82,7 @@ const EMPTY_SUMMARY: SummaryData = {
   upcoming: [],
   longterm: [],
   people: [],
+  viral: [],
   alerts: [],
 }
 
@@ -112,11 +113,11 @@ export async function generateSummary(items: NewsItem[]): Promise<SummaryData> {
         {
           role: 'assistant',
           content:
-            '{"overview":"本期輿情以科技外交為主軸，整體基調偏中性偏積極，台積電擴廠帶動產業信心，但颱風警報與選戰動態引發民生與政治的雙重關注。","topics":["台積電赴美擴廠動向","賴清德歐洲外交布局","選舉民調各黨消長","颱風防災緊急應對","美中貿易談判進展"],"brewing":["台積電擴廠引發的產業空洞化辯論正在業界發酵，供應鏈去台化疑慮持續升溫","賴清德出訪後北京極可能採取外交或軍事反制動作，兩岸緊張程度值得持續追蹤","選舉民調進入關鍵期，各黨策略將隨數字變動迅速調整"],"upcoming":["颱風若轉向台灣本島，將在 48 小時內引爆大規模民生與防災報導","選舉初選提名結果公布後，藍綠攻防預計全面升溫"],"longterm":["半導體供應鏈重組對台灣在全球分工角色的長遠影響","台美關係持續深化與兩岸對峙並存的戰略平衡挑戰"],"people":["賴清德","黃仁勳","川普","習近平","柯文哲"],"alerts":["颱風路徑48小時仍不確定，若轉向台灣需立即進入防災應變","賴清德出訪期間兩岸軍事動態需高度關注，解放軍演習風險升高"]}',
+            '{"overview":"本期輿情以科技外交為主軸，整體基調偏中性偏積極，台積電擴廠帶動產業信心，但颱風警報與選戰動態引發民生與政治的雙重關注。","topics":["台積電赴美擴廠動向","賴清德歐洲外交布局","選舉民調各黨消長","颱風防災緊急應對","美中貿易談判進展"],"brewing":["台積電擴廠引發的產業空洞化辯論正在業界發酵，供應鏈去台化疑慮持續升溫","賴清德出訪後北京極可能採取外交或軍事反制動作，兩岸緊張程度值得持續追蹤","選舉民調進入關鍵期，各黨策略將隨數字變動迅速調整"],"upcoming":["颱風若轉向台灣本島，將在 48 小時內引爆大規模民生與防災報導","選舉初選提名結果公布後，藍綠攻防預計全面升溫"],"longterm":["半導體供應鏈重組對台灣在全球分工角色的長遠影響","台美關係持續深化與兩岸對峙並存的戰略平衡挑戰"],"people":["賴清德","黃仁勳","川普","習近平","柯文哲"],"viral":["颱風警報發布，各地網友瘋傳疏散路線與物資清單","選舉民調截圖熱傳，社群論戰加劇"],"alerts":["颱風路徑48小時仍不確定，若轉向台灣需立即進入防災應變","賴清德出訪期間兩岸軍事動態需高度關注，解放軍演習風險升高"]}',
         },
         {
           role: 'user',
-          content: `你是台灣輿情分析師。分析以下新聞標題，用繁體中文只輸出 JSON，不要其他文字。\n格式：{"overview":"整體輿情2-3句含情緒判讀","topics":["當前五大議題（15字以內）"],"brewing":["正在醞釀的3個動向，說明往哪個方向發展（30字以內）"],"upcoming":["2-3個即將可能升溫的話題及原因（30字以內）"],"longterm":["2-3個長期需關注的重要議題（25字以內）"],"people":["當前最受關注的4-6位人物姓名"],"alerts":["今日需特別注意的2-3個警示：潛在危機、爭議升溫或緊張情勢（40字以內，含具體說明）"]}\n新聞標題：\n${titles}\n輸出：`,
+          content: `你是台灣輿情分析師。分析以下新聞標題，用繁體中文只輸出 JSON，不要其他文字。\n格式：{"overview":"整體輿情2-3句含情緒判讀","topics":["當前五大議題（15字以內）"],"brewing":["正在醞釀的3個動向，說明往哪個方向發展（30字以內）"],"upcoming":["2-3個即將可能升溫的話題及原因（30字以內）"],"longterm":["2-3個長期需關注的重要議題（25字以內）"],"people":["當前最受關注的4-6位人物姓名"],"viral":["2-3個在社群媒體上最具擴散潛力的話題，說明為何容易引發轉傳或討論（30字以內）"],"alerts":["今日需特別注意的2-3個警示：潛在危機、爭議升溫或緊張情勢（40字以內，含具體說明）"]}\n新聞標題：\n${titles}\n輸出：`,
         },
       ],
       temperature: 0.3,
@@ -134,6 +135,7 @@ export async function generateSummary(items: NewsItem[]): Promise<SummaryData> {
         upcoming: Array.isArray(parsed.upcoming) ? parsed.upcoming.slice(0, 3) : [],
         longterm: Array.isArray(parsed.longterm) ? parsed.longterm.slice(0, 3) : [],
         people:   Array.isArray(parsed.people)   ? parsed.people.slice(0, 6)   : [],
+        viral:    Array.isArray(parsed.viral)    ? parsed.viral.slice(0, 3)    : [],
         alerts:   Array.isArray(parsed.alerts)   ? parsed.alerts.slice(0, 3)   : [],
       }
     }
