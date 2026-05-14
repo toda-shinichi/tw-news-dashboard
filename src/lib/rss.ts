@@ -26,30 +26,28 @@ const gnq = (
 })
 
 const RSS_SOURCES: RSSSource[] = [
-  // ── 台灣直連（8 源）─────────────────────────────────
-  { name: '自由時報', url: 'https://news.ltn.com.tw/rss/all.xml',                  column: 'tw' },
-  { name: '公視新聞', url: 'https://about.pts.org.tw/rss/XML/newsfeed.xml',         column: 'tw' },
-  { name: '報導者',   url: 'https://public.twreporter.org/rss/twreporter-rss.xml', column: 'tw' },
-  { name: '聯合新聞網', url: 'https://udn.com/rssfeed/news/2/0?ch=news',            column: 'tw' },
-  { name: '中時電子報', url: 'https://www.chinatimes.com/rss/realtime.xml',         column: 'tw' },
-  { name: 'TVBS',    url: 'https://news.tvbs.com.tw/rss/news',                      column: 'tw' },
-  { name: 'ETtoday', url: 'https://feeds.feedburner.com/ettoday/realtime',          column: 'tw' },
-  { name: '三立新聞', url: 'https://www.setn.com/rss.ashx',                         column: 'tw' },
+  // ── 台灣直連：綜合 ───────────────────────────────────
+  { name: '自由時報',  url: 'https://news.ltn.com.tw/rss/all.xml',                   column: 'tw' },
+  { name: '聯合新聞網', url: 'https://udn.com/rssfeed/news/2/0?ch=news',              column: 'tw' },
+  { name: 'ETtoday',  url: 'https://feeds.feedburner.com/ettoday/realtime',           column: 'tw' },
 
-  // ── 台灣 Google News 政治（3 條，各攻不同角度）────────
-  gnq('台灣政治 立法院 行政院 賴清德 施政', 'tw', '政治-機構', 'politics'),
-  gnq('選舉 罷免 補選 政黨 民調 朝野協商', 'tw', '政治-選舉', 'politics'),
-  gnq('台灣外交 國防政策 兩岸關係 軍售', 'tw', '政治-外交', 'politics'),
+  // ── 台灣直連：政治（直接標記分類，最可靠）────────────────
+  { name: '自由時報政治', url: 'https://news.ltn.com.tw/rss/politics.xml',            column: 'tw', defaultCategory: 'politics' },
+  { name: '聯合政治',    url: 'https://udn.com/rssfeed/news/2/6638?ch=news',          column: 'tw', defaultCategory: 'politics' },
+  { name: '中央社政治',  url: 'https://feeds.feedburner.com/rsscna/politics',         column: 'tw', defaultCategory: 'politics' },
 
-  // ── 台灣 Google News 社會（3 條）────────────────────
-  gnq('台灣治安 司法 詐騙 犯罪 刑事', 'tw', '社會-治安', 'society'),
-  gnq('台灣火災 地震 事故 意外 搜救', 'tw', '社會-災害', 'society'),
-  gnq('台灣環保 環境污染 食安 校園 社會', 'tw', '社會-環境', 'society'),
+  // ── 台灣直連：社會 ──────────────────────────────────
+  { name: '自由時報社會', url: 'https://news.ltn.com.tw/rss/society.xml',             column: 'tw', defaultCategory: 'society' },
+  { name: '聯合社會',    url: 'https://udn.com/rssfeed/news/2/6639?ch=news',          column: 'tw', defaultCategory: 'society' },
 
-  // ── 台灣 Google News 民生（3 條）────────────────────
-  gnq('台積電 半導體 AI 科技 鴻海', 'tw', '科技民生', 'life'),
-  gnq('台股 財經 房市 物價 通膨', 'tw', '財經民生', 'life'),
-  gnq('醫療 食品 教育 交通 民生 消費', 'tw', '生活民生', 'life'),
+  // ── 台灣直連：民生 ──────────────────────────────────
+  { name: '自由時報財經', url: 'https://news.ltn.com.tw/rss/business.xml',            column: 'tw', defaultCategory: 'life' },
+  { name: '聯合財經',    url: 'https://udn.com/rssfeed/news/2/6644?ch=news',          column: 'tw', defaultCategory: 'life' },
+
+  // ── 台灣 Google News 補充（各類補充來源多樣性）──────────
+  gnq('台灣外交 兩岸政策 國防 軍售', 'tw', '政治補充', 'politics'),
+  gnq('台灣社會案件 意外 災害 食安', 'tw', '社會補充', 'society'),
+  gnq('台積電 台股 科技 AI 房市', 'tw', '民生補充', 'life'),
 
   // ── 國際 Google News（5 條）─────────────────────────
   gnq('Taiwan politics diplomacy security', 'intl', 'Taiwan', undefined, 'en-US', 'US', 'US:en'),
