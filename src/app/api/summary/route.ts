@@ -5,7 +5,7 @@ import { getAccumulatedNews } from '@/lib/newsStore'
 import { TabRange, SummaryResponse, SummaryData } from '@/types'
 
 export const runtime = 'nodejs'
-export const maxDuration = 30
+export const maxDuration = 60
 
 export async function GET(req: NextRequest) {
   const tab = (req.nextUrl.searchParams.get('tab') || 'today') as TabRange
@@ -18,8 +18,8 @@ export async function GET(req: NextRequest) {
   }
 
   const [twItems, intlItems] = await Promise.all([
-    getAccumulatedNews('tw', tab, force),
-    getAccumulatedNews('intl', tab, force),
+    getAccumulatedNews('tw', tab, force, true),
+    getAccumulatedNews('intl', tab, force, true),
   ])
   const allItems = [...twItems, ...intlItems]
 

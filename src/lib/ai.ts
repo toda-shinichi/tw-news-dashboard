@@ -104,12 +104,12 @@ export async function generateSummary(items: NewsItem[]): Promise<SummaryData> {
 
   try {
     const resp = await client.chat.completions.create({
-      model: MODEL_QUALITY,
+      model: MODEL_FAST,
       messages: [
         {
           role: 'user',
           content:
-            '你是台灣輿情分析師。分析標題，只輸出 JSON，不要其他文字。\n格式：{"overview":"...","topics":["..."],"brewing":["..."],"upcoming":["..."],"longterm":["..."],"people":["..."],"alerts":["..."]}\n標題：台積電宣布赴美擴廠、賴清德出訪歐洲、選舉民調公布、颱風警報發布、美中貿易談判。\n輸出：',
+            '你是台灣輿情分析師。分析標題，只輸出 JSON，不要其他文字。\n格式：{"overview":"...","topics":["..."],"brewing":["..."],"upcoming":["..."],"longterm":["..."],"people":["..."],"viral":["..."],"alerts":["..."]}\n標題：台積電宣布赴美擴廠、賴清德出訪歐洲、選舉民調公布、颱風警報發布、美中貿易談判。\n輸出：',
         },
         {
           role: 'assistant',
@@ -122,7 +122,7 @@ export async function generateSummary(items: NewsItem[]): Promise<SummaryData> {
         },
       ],
       temperature: 0.3,
-      max_tokens: 1200,
+      max_tokens: 1400,
     })
 
     const text = resp.choices[0]?.message?.content?.trim() || '{}'
