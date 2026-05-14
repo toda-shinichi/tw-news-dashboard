@@ -1,4 +1,4 @@
-import { TabRange } from '@/types'
+import { TabRange, NewsCategory } from '@/types'
 
 export function hashString(str: string): string {
   let hash = 0
@@ -54,6 +54,73 @@ export function dedupeByTitle<T extends { title: string }>(items: T[]): T[] {
 export function truncate(str: string, maxLen: number): string {
   if (!str) return ''
   return str.length > maxLen ? str.slice(0, maxLen) + '…' : str
+}
+
+const CATEGORY_RULES: Array<{ cat: NewsCategory; words: string[] }> = [
+  {
+    cat: 'entertainment',
+    words: ['藝人', '演員', '歌手', '偶像', '電影', '音樂', '娛樂', '綜藝', '戲劇', '網紅', '明星', '演唱會', '韓劇', '劇組', '影集'],
+  },
+  {
+    cat: 'tech',
+    words: ['台積電', '半導體', '晶片', 'AI', '人工智慧', '科技', '鴻海', '5G', '電動車', '機器人', '新創', 'NVIDIA', '輝達'],
+  },
+  {
+    cat: 'finance',
+    words: ['股市', '台股', '外匯', '投資', '財報', 'GDP', '通膨', '升息', '降息', '房價', '央行', '金融', '銀行', '基金', 'ETF', '匯率'],
+  },
+  {
+    cat: 'politics',
+    words: ['立法院', '行政院', '總統', '選舉', '民進黨', '國民黨', '外交', '兩岸', '國防', '軍事', '政策', '中共', '解放軍', '美台'],
+  },
+  {
+    cat: 'life',
+    words: ['物價', '民生', '交通', '食安', '消費', '購物', '旅遊', '美食', '健康', '飲食', '住宅', '租屋'],
+  },
+  {
+    cat: 'society',
+    words: ['警察', '犯罪', '刑事', '事故', '火災', '地震', '颱風', '醫療', '教育', '環保', '環境', '法院', '判決'],
+  },
+]
+
+export function classifyCategory(title: string): NewsCategory {
+  let best: NewsCategory = 'society'
+  let bestScore = 0
+  for (const { cat, words } of CATEGORY_RULES) {
+    const score = words.filter(w => title.includes(w)).length
+    if (score > bestScore) {
+      bestScore = score
+      best = cat
+    }
+  }
+  return best
+}
+
+const HOT_STOPWORDS = new Set([
+  '台灣', '記者', '報導', '指出', '表示', '說明', '今天', '今日', '宣布',
+  '發表', '公布', '提出', '日前', '相關', '部分', '進行', '已經', '目前',
+  '最新', '消息', '新聞', '媒體', '分析', '顯示', '根據', '認為', '強調',
+])
+
+export function computeHotKeywords(titles: string[], topN = 5): string[] {
+  const freq = new Map<string, number>()
+  for (const title of titles) {
+    const seen = new Set<string>()
+    for (let len = 2; len <= 4; len++) {
+      for (let i = 0; i <= title.length - len; i++) {
+        const w = title.slice(i, i + len)
+        if (/^[一-鿿]+$/.test(w) && !HOT_STOPWORDS.has(w) && !seen.has(w)) {
+          seen.add(w)
+          freq.set(w, (freq.get(w) || 0) + 1)
+        }
+      }
+    }
+  }
+  return [...freq.entries()]
+    .filter(([, c]) => c >= 2)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, topN)
+    .map(([w]) => w)
 }
 
 export function formatRelativeTime(iso: string): string {

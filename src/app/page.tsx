@@ -12,6 +12,7 @@ import { TabRange, NewsItem } from '@/types'
 interface HotData {
   topics: string[]
   keywords: string[]
+  people: string[]
 }
 
 interface PageState {
@@ -31,7 +32,7 @@ interface PageState {
   error: { tw?: string; intl?: string }
 }
 
-const EMPTY_HOTDATA: HotData = { topics: [], keywords: [] }
+const EMPTY_HOTDATA: HotData = { topics: [], keywords: [], people: [] }
 
 const INITIAL_STATE: PageState = {
   twNews: [],
@@ -46,8 +47,11 @@ const INITIAL_STATE: PageState = {
 export default function HomePage() {
   const [tab, setTab] = useState<TabRange>('today')
   const [state, setState] = useState<PageState>(INITIAL_STATE)
+  const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
-  const fetchData = useCallback(async (activeTab: TabRange) => {
+  const fetchData = useCallback(async (activeTab: TabRange, force = false) => {
+    const qs = force ? '&force=1' : ''
     setState(prev => ({
       ...prev,
       loading: { tw: true, intl: true, summary: true, keywords: true, hotlist: true },
@@ -56,14 +60,14 @@ export default function HomePage() {
 
     // Fetch news first so hotlist can reuse the cache
     const [twRes, intlRes] = await Promise.allSettled([
-      fetch(`/api/news?tab=${activeTab}&col=tw`).then(r => r.json()),
-      fetch(`/api/news?tab=${activeTab}&col=intl`).then(r => r.json()),
+      fetch(`/api/news?tab=${activeTab}&col=tw${qs}`).then(r => r.json()),
+      fetch(`/api/news?tab=${activeTab}&col=intl${qs}`).then(r => r.json()),
     ])
 
     const [summaryRes, keywordsRes, hotlistRes] = await Promise.allSettled([
-      fetch(`/api/summary?tab=${activeTab}`).then(r => r.json()),
-      fetch(`/api/keywords?tab=${activeTab}`).then(r => r.json()),
-      fetch(`/api/hotlist?tab=${activeTab}`).then(r => r.json()),
+      fetch(`/api/summary?tab=${activeTab}${qs}`).then(r => r.json()),
+      fetch(`/api/keywords?tab=${activeTab}${qs}`).then(r => r.json()),
+      fetch(`/api/hotlist?tab=${activeTab}${qs}`).then(r => r.json()),
     ])
 
     setState(prev => ({
@@ -101,9 +105,24 @@ export default function HomePage() {
     fetchData(tab)
   }, [tab, fetchData])
 
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true)
+    await fetchData(tab, true)
+    setRefreshing(false)
+  }, [tab, fetchData])
+
+  const handleTabChange = (newTab: TabRange) => {
+    setSelectedKeyword(null)
+    setTab(newTab)
+  }
+
   return (
     <div className="min-h-screen bg-[#F7F5F0]">
-      <Header updatedAt={state.updatedAt} />
+      <Header
+        updatedAt={state.updatedAt}
+        onRefresh={handleRefresh}
+        refreshing={refreshing}
+      />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
         {/* AI 輿情摘要 */}
@@ -114,6 +133,8 @@ export default function HomePage() {
           tw={state.hotlist.tw}
           intl={state.hotlist.intl}
           loading={state.loading.hotlist}
+          twItems={state.twNews}
+          intlItems={state.intlNews}
         />
 
         {/* 議題標籤 */}
@@ -121,12 +142,17 @@ export default function HomePage() {
           <h2 className="text-xs font-medium text-[#888888] uppercase tracking-widest mb-3">
             本期議題焦點
           </h2>
-          <KeywordCloud keywords={state.keywords} loading={state.loading.keywords} />
+          <KeywordCloud
+            keywords={state.keywords}
+            loading={state.loading.keywords}
+            selectedWord={selectedKeyword}
+            onSelect={setSelectedKeyword}
+          />
         </section>
 
         {/* Tab 切換 */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <TabBar active={tab} onChange={setTab} />
+          <TabBar active={tab} onChange={handleTabChange} />
           <span className="text-xs text-[#888888]">
             {tab === 'today' ? '過去 24 小時' : ''}資料每 6 小時更新一次
           </span>
@@ -140,6 +166,7 @@ export default function HomePage() {
             items={state.twNews}
             loading={state.loading.tw}
             error={state.error.tw}
+            selectedKeyword={selectedKeyword}
           />
           <div className="md:border-l md:border-[#E8E4DC] md:pl-8">
             <NewsColumn
@@ -148,6 +175,7 @@ export default function HomePage() {
               items={state.intlNews}
               loading={state.loading.intl}
               error={state.error.intl}
+              selectedKeyword={selectedKeyword}
             />
           </div>
         </div>

@@ -10,10 +10,11 @@ export const maxDuration = 30
 
 export async function GET(req: NextRequest) {
   const tab = (req.nextUrl.searchParams.get('tab') || 'today') as TabRange
+  const force = req.nextUrl.searchParams.get('force') === '1'
   const cacheKey = `summary:${tab}`
 
   const cached = await cacheGet<SummaryResponse>(cacheKey)
-  if (cached) {
+  if (cached && !force) {
     return NextResponse.json({ ...cached, fromCache: true })
   }
 

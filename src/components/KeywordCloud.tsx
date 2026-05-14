@@ -6,9 +6,11 @@ interface Keyword {
 interface KeywordCloudProps {
   keywords: Keyword[]
   loading?: boolean
+  selectedWord?: string | null
+  onSelect?: (word: string | null) => void
 }
 
-export default function KeywordCloud({ keywords, loading }: KeywordCloudProps) {
+export default function KeywordCloud({ keywords, loading, selectedWord, onSelect }: KeywordCloudProps) {
   if (loading) {
     return (
       <div className="flex flex-wrap gap-2">
@@ -31,20 +33,33 @@ export default function KeywordCloud({ keywords, loading }: KeywordCloudProps) {
     <div className="flex flex-wrap gap-2">
       {keywords.map(({ word, count }) => {
         const weight = count / maxCount
+        const isSelected = selectedWord === word
         return (
-          <span
+          <button
             key={word}
-            className="px-3 py-1 rounded-full text-sm border border-[#E8E4DC] cursor-default transition-colors hover:border-[#5B7FA6]/40"
+            onClick={() => onSelect?.(isSelected ? null : word)}
+            className="px-3 py-1 rounded-full text-sm border transition-colors"
             style={{
-              backgroundColor: `rgba(91, 127, 166, ${0.06 + weight * 0.14})`,
-              color: weight > 0.6 ? '#3D5A7A' : '#555555',
-              fontWeight: weight > 0.7 ? 500 : 400,
+              backgroundColor: isSelected
+                ? 'rgba(91, 127, 166, 0.25)'
+                : `rgba(91, 127, 166, ${0.06 + weight * 0.14})`,
+              borderColor: isSelected ? '#5B7FA6' : '#E8E4DC',
+              color: isSelected ? '#3D5A7A' : weight > 0.6 ? '#3D5A7A' : '#555555',
+              fontWeight: isSelected || weight > 0.7 ? 500 : 400,
             }}
           >
             {word}
-          </span>
+          </button>
         )
       })}
+      {selectedWord && (
+        <button
+          onClick={() => onSelect?.(null)}
+          className="px-3 py-1 rounded-full text-sm border border-dashed border-[#AAAAAA] text-[#888888] hover:border-[#888888] transition-colors"
+        >
+          清除篩選 ×
+        </button>
+      )}
     </div>
   )
 }

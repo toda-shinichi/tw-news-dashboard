@@ -4,7 +4,7 @@ import { fetchNewsAPI } from '@/lib/newsapi'
 import { fetchGDELT, getGDELTTimespan } from '@/lib/gdelt'
 import { analyzeSentiment } from '@/lib/ai'
 import { cacheGet, cacheSet } from '@/lib/cache'
-import { filterByDateRange, dedupeByTitle } from '@/lib/utils'
+import { filterByDateRange, dedupeByTitle, classifyCategory } from '@/lib/utils'
 import { NewsItem, TabRange, NewsColumn, NewsResponse } from '@/types'
 
 export const runtime = 'nodejs'
@@ -13,10 +13,11 @@ export const maxDuration = 30
 export async function GET(req: NextRequest) {
   const tab = (req.nextUrl.searchParams.get('tab') || 'today') as TabRange
   const column = (req.nextUrl.searchParams.get('col') || 'tw') as NewsColumn
+  const force = req.nextUrl.searchParams.get('force') === '1'
 
   const cacheKey = `news:${tab}:${column}`
   const cached = await cacheGet<NewsResponse>(cacheKey)
-  if (cached) {
+  if (cached && !force) {
     return NextResponse.json({ ...cached, fromCache: true })
   }
 
@@ -48,6 +49,7 @@ export async function GET(req: NextRequest) {
   const withSentiment: NewsItem[] = filtered.map(item => ({
     ...item,
     sentiment: sentimentMap[item.id] ?? 'neutral',
+    category: item.category ?? classifyCategory(item.title),
   }))
 
   const response: NewsResponse = {

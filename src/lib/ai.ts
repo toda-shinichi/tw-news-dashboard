@@ -160,6 +160,7 @@ export async function extractKeywords(
 export interface HotList {
   topics: string[]
   keywords: string[]
+  people: string[]
 }
 
 export async function extractHotList(
@@ -167,7 +168,7 @@ export async function extractHotList(
   lang: 'zh' | 'en' = 'zh'
 ): Promise<HotList> {
   if (!process.env.CPA_API_KEY || titles.length === 0)
-    return { topics: [], keywords: [] }
+    return { topics: [], keywords: [], people: [] }
 
   const client = getClient()
   const joined = titles.slice(0, 60).join('。')
@@ -180,16 +181,16 @@ export async function extractHotList(
         {
           role: 'user',
           content:
-            '從標題萃取熱門議題和關鍵字，只輸出 JSON，格式：{"topics":["議題1","議題2","議題3","議題4","議題5"],"keywords":["詞1","詞2","詞3","詞4","詞5"]}\n標題：美台軍購案通過、中美貿易談判、台積電擴廠、颱風警報、選舉民調。\n輸出：',
+            '從標題萃取熱門議題、關鍵字和人物，只輸出 JSON，格式：{"topics":["議題1","議題2","議題3","議題4","議題5"],"keywords":["詞1","詞2","詞3","詞4","詞5"],"people":["人名1","人名2","人名3","人名4","人名5"]}\n標題：美台軍購案通過、中美貿易談判、台積電擴廠、賴清德出訪、川普關稅。\n輸出：',
         },
         {
           role: 'assistant',
           content:
-            '{"topics":["美台軍售爭議","中美貿易角力","台積電擴廠動向","颱風防災應對","選舉政治博弈"],"keywords":["軍購","中美談判","台積電","颱風","民調"]}',
+            '{"topics":["美台軍售爭議","中美貿易角力","台積電擴廠動向","賴清德外交布局","川普關稅政策"],"keywords":["軍購","中美談判","台積電","出訪","關稅"],"people":["賴清德","川普","黃仁勳","拜登","習近平"]}',
         },
         {
           role: 'user',
-          content: `${langNote}從以下標題萃取五大熱門議題（5–8 字的主題名稱）與五大熱門關鍵字，只輸出 JSON，格式：{"topics":["議題1","議題2","議題3","議題4","議題5"],"keywords":["詞1","詞2","詞3","詞4","詞5"]}\n標題：${joined}\n輸出：`,
+          content: `${langNote}從以下標題萃取五大熱門議題（5–8 字的主題名稱）、五大熱門關鍵字、五大熱門人物，只輸出 JSON，格式：{"topics":["議題1","議題2","議題3","議題4","議題5"],"keywords":["詞1","詞2","詞3","詞4","詞5"],"people":["人名1","人名2","人名3","人名4","人名5"]}\n標題：${joined}\n輸出：`,
         },
       ],
       temperature: 0,
@@ -203,10 +204,11 @@ export async function extractHotList(
       return {
         topics: Array.isArray(parsed.topics) ? parsed.topics.slice(0, 5) : [],
         keywords: Array.isArray(parsed.keywords) ? parsed.keywords.slice(0, 5) : [],
+        people: Array.isArray(parsed.people) ? parsed.people.slice(0, 5) : [],
       }
     }
-    return { topics: [], keywords: [] }
+    return { topics: [], keywords: [], people: [] }
   } catch {
-    return { topics: [], keywords: [] }
+    return { topics: [], keywords: [], people: [] }
   }
 }

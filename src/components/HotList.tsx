@@ -1,58 +1,115 @@
+'use client'
+
+import { useState, useMemo } from 'react'
+import clsx from 'clsx'
+import { NewsItem, NewsCategory } from '@/types'
+import { computeHotKeywords } from '@/lib/utils'
+
 interface HotData {
   topics: string[]
   keywords: string[]
+  people: string[]
 }
 
 interface HotListProps {
   tw: HotData
   intl: HotData
   loading?: boolean
+  twItems?: NewsItem[]
+  intlItems?: NewsItem[]
+}
+
+const CATEGORY_TABS: { value: NewsCategory; label: string }[] = [
+  { value: 'all', label: '全部' },
+  { value: 'politics', label: '政治' },
+  { value: 'society', label: '社會' },
+  { value: 'entertainment', label: '娛樂' },
+  { value: 'finance', label: '財經' },
+  { value: 'tech', label: '科技' },
+  { value: 'life', label: '民生' },
+]
+
+function RankedList({ items, loading, color = '#5B7FA6' }: { items: string[]; loading?: boolean; color?: string }) {
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-5 bg-[#EFECE5] rounded animate-pulse" style={{ width: `${60 + i * 8}%` }} />
+        ))}
+      </div>
+    )
+  }
+  if (items.length === 0) return <p className="text-xs text-[#888888]">資料不足</p>
+  return (
+    <ol className="space-y-1.5">
+      {items.map((item, i) => (
+        <li key={i} className="flex items-start gap-2">
+          <span className="text-xs font-semibold w-4 flex-shrink-0 mt-0.5" style={{ color }}>
+            {i + 1}
+          </span>
+          <span className="text-xs text-[#2C2C2C] leading-snug">{item}</span>
+        </li>
+      ))}
+    </ol>
+  )
+}
+
+function TagList({ items, loading }: { items: string[]; loading?: boolean }) {
+  if (loading) {
+    return (
+      <div className="space-y-2">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-5 bg-[#EFECE5] rounded animate-pulse" style={{ width: `${50 + i * 5}%` }} />
+        ))}
+      </div>
+    )
+  }
+  if (items.length === 0) return <p className="text-xs text-[#888888]">資料不足</p>
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((item, i) => (
+        <span
+          key={i}
+          className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-[#EBF0F7] text-[#3D5A7A] font-medium"
+        >
+          {item}
+        </span>
+      ))}
+    </div>
+  )
 }
 
 function HotColumn({
   label,
   data,
   loading,
+  filteredTitles,
+  isFiltered,
 }: {
   label: string
   data: HotData
   loading?: boolean
+  filteredTitles: string[]
+  isFiltered: boolean
 }) {
+  const computed = useMemo(
+    () => (isFiltered ? computeHotKeywords(filteredTitles, 5) : []),
+    [isFiltered, filteredTitles]
+  )
+
+  const displayTopics = isFiltered ? computed : data.topics
+  const displayKeywords = isFiltered ? computed.slice(0, 5) : data.keywords
+  const displayPeople = isFiltered ? [] : data.people
+
   return (
     <div className="flex-1 min-w-0">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-xs font-medium text-[#888888] uppercase tracking-widest">
-          {label}
-        </span>
-      </div>
+      <p className="text-xs font-medium text-[#888888] uppercase tracking-widest mb-3">{label}</p>
 
-      <div className="grid grid-cols-2 gap-3">
-        {/* 五大議題 */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大議題</p>
-          {loading ? (
-            <div className="space-y-2">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-5 bg-[#EFECE5] rounded animate-pulse" style={{ width: `${65 + i * 5}%` }} />
-              ))}
-            </div>
-          ) : data.topics.length === 0 ? (
-            <p className="text-xs text-[#888888]">資料不足</p>
-          ) : (
-            <ol className="space-y-1.5">
-              {data.topics.map((topic, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="text-xs font-semibold text-[#5B7FA6] w-4 flex-shrink-0 mt-0.5">
-                    {i + 1}
-                  </span>
-                  <span className="text-xs text-[#2C2C2C] leading-snug">{topic}</span>
-                </li>
-              ))}
-            </ol>
-          )}
+          <RankedList items={displayTopics} loading={loading} />
         </div>
-
-        {/* 五大關鍵字 */}
         <div>
           <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大關鍵字</p>
           {loading ? (
@@ -61,21 +118,20 @@ function HotColumn({
                 <div key={i} className="h-5 bg-[#EFECE5] rounded animate-pulse" style={{ width: `${50 + i * 5}%` }} />
               ))}
             </div>
-          ) : data.keywords.length === 0 ? (
-            <p className="text-xs text-[#888888]">資料不足</p>
           ) : (
-            <ol className="space-y-1.5">
-              {data.keywords.map((kw, i) => (
-                <li key={i} className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-[#5B7FA6] w-4 flex-shrink-0">
-                    {i + 1}
-                  </span>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-[#EBF0F7] text-[#3D5A7A] font-medium">
-                    {kw}
-                  </span>
-                </li>
+            <TagList items={displayKeywords} />
+          )}
+        </div>
+        <div>
+          <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大人物</p>
+          {loading ? (
+            <div className="space-y-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-5 bg-[#EFECE5] rounded animate-pulse" style={{ width: `${45 + i * 5}%` }} />
               ))}
-            </ol>
+            </div>
+          ) : (
+            <TagList items={displayPeople} />
           )}
         </div>
       </div>
@@ -83,20 +139,62 @@ function HotColumn({
   )
 }
 
-export default function HotList({ tw, intl, loading }: HotListProps) {
+export default function HotList({ tw, intl, loading, twItems = [], intlItems = [] }: HotListProps) {
+  const [selectedCat, setSelectedCat] = useState<NewsCategory>('all')
+  const isFiltered = selectedCat !== 'all'
+
+  const filteredTwTitles = useMemo(
+    () => (isFiltered ? twItems.filter(i => i.category === selectedCat).map(i => i.title) : []),
+    [isFiltered, twItems, selectedCat]
+  )
+  const filteredIntlTitles = useMemo(
+    () => (isFiltered ? intlItems.filter(i => i.category === selectedCat).map(i => i.title) : []),
+    [isFiltered, intlItems, selectedCat]
+  )
+
   return (
     <div className="bg-white border border-[#E8E4DC] rounded-xl p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <span className="w-2 h-2 rounded-full bg-[#E8844A]" />
-        <span className="text-xs font-medium text-[#E8844A] uppercase tracking-widest">
-          熱門排行
-        </span>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-[#E8844A]" />
+          <span className="text-xs font-medium text-[#E8844A] uppercase tracking-widest">
+            熱門排行
+          </span>
+        </div>
+        <div className="flex gap-1 flex-wrap">
+          {CATEGORY_TABS.map(tab => (
+            <button
+              key={tab.value}
+              onClick={() => setSelectedCat(tab.value)}
+              className={clsx(
+                'px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors',
+                selectedCat === tab.value
+                  ? 'bg-[#E8844A] text-white'
+                  : 'bg-[#EFECE5] text-[#555555] hover:text-[#2C2C2C]'
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-6 md:gap-8">
-        <HotColumn label="台灣" data={tw} loading={loading} />
+        <HotColumn
+          label="台灣"
+          data={tw}
+          loading={loading}
+          filteredTitles={filteredTwTitles}
+          isFiltered={isFiltered}
+        />
         <div className="md:border-l md:border-[#E8E4DC] md:pl-8">
-          <HotColumn label="國際" data={intl} loading={loading} />
+          <HotColumn
+            label="國際"
+            data={intl}
+            loading={loading}
+            filteredTitles={filteredIntlTitles}
+            isFiltered={isFiltered}
+          />
         </div>
       </div>
     </div>
