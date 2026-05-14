@@ -12,6 +12,7 @@ interface NewsColumnProps {
   items: NewsItem[]
   loading?: boolean
   error?: string
+  building?: boolean
   selectedKeyword?: string | null
 }
 
@@ -30,6 +31,7 @@ export default function NewsColumn({
   items,
   loading,
   error,
+  building,
   selectedKeyword,
 }: NewsColumnProps) {
   const [selectedCat, setSelectedCat] = useState<NewsCategory>('all')
@@ -88,11 +90,19 @@ export default function NewsColumn({
 
       {loading && <LoadingState count={5} />}
 
-      {error && (
+      {!loading && error && (
         <div className="text-sm text-red-500 bg-red-50 rounded-lg p-3">{error}</div>
       )}
 
-      {!loading && !error && displayItems.length === 0 && (
+      {!loading && !error && building && (
+        <div className="flex flex-col items-center gap-3 py-14 text-center">
+          <span className="text-2xl animate-spin inline-block">⟳</span>
+          <p className="text-sm font-medium text-[#5B7FA6]">正在建立資料庫</p>
+          <p className="text-xs text-[#888888]">首次啟動需從各媒體抓取新聞，約需 30–60 秒。<br />請稍後手動重新整理頁面。</p>
+        </div>
+      )}
+
+      {!loading && !error && !building && displayItems.length === 0 && (
         <div className="text-sm text-[#888888] text-center py-12">
           {items.length > 0 ? '此分類無符合條件的新聞' : '此時段無新聞資料'}
         </div>

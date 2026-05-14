@@ -9,226 +9,41 @@ interface RSSSource {
   defaultCategory?: Exclude<NewsCategory, 'all'>
 }
 
-// Google News site: query helper
-const gn = (
-  site: string,
+// Google News topic search helper
+const gnq = (
+  q: string,
   col: NewsColumn,
   label: string,
-  cat?: Exclude<NewsCategory, 'all'>
+  cat?: Exclude<NewsCategory, 'all'>,
+  lang = 'zh-TW',
+  gl = 'TW',
+  ceid = 'TW:zh-Hant'
 ): RSSSource => ({
-  name: label,
-  url: `https://news.google.com/rss/search?q=site:${site}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`,
-  column: col,
-  defaultCategory: cat,
-})
-
-// CNA feedburner helper
-const cna = (
-  path: string,
-  label: string,
-  cat: Exclude<NewsCategory, 'all'>,
-  col: NewsColumn = 'tw'
-): RSSSource => ({
-  name: `中央社 ${label}`,
-  url: `https://feeds.feedburner.com/rsscna/${path}`,
-  column: col,
-  defaultCategory: cat,
-})
-
-// LTN category helper
-const ltn = (
-  path: string,
-  label: string,
-  cat: Exclude<NewsCategory, 'all'>,
-  col: NewsColumn = 'tw'
-): RSSSource => ({
-  name: `自由時報 ${label}`,
-  url: `https://news.ltn.com.tw/rss/${path}.xml`,
+  name: `Google News ${label}`,
+  url: `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=${lang}&gl=${gl}&ceid=${ceid}`,
   column: col,
   defaultCategory: cat,
 })
 
 const RSS_SOURCES: RSSSource[] = [
-  // ── 自由時報（直連，分類 feed）────────────────────
+  // ── 台灣直連（可靠、自有伺服器）──────────────────
   { name: '自由時報', url: 'https://news.ltn.com.tw/rss/all.xml', column: 'tw' },
-  ltn('politics', '政治', 'politics'),
-  ltn('society', '社會', 'society'),
-  ltn('life', '生活', 'life'),
-  ltn('business', '財經', 'life'),
-  ltn('entertainment', '娛樂', 'life'),
-  ltn('def', '軍武', 'politics'),
-  ltn('world', '國際', 'politics', 'intl'),
-
-  // ── 中央社（feedburner 直連，分類 feed）──────────
-  cna('politics', '政治', 'politics'),
-  cna('mainland', '兩岸', 'politics'),
-  cna('finance', '產經', 'life'),
-  cna('technology', '科技', 'life'),
-  cna('lifehealth', '生活', 'life'),
-  cna('social', '社會', 'society'),
-  cna('local', '地方', 'society'),
-  cna('culture', '文化', 'life'),
-  cna('stars', '娛樂', 'life'),
-  cna('intworld', '國際', 'politics', 'intl'),
-
-  // ── 其他台灣媒體（直連）──────────────────────────
   { name: '公視新聞', url: 'https://about.pts.org.tw/rss/XML/newsfeed.xml', column: 'tw' },
-  { name: '風傳媒', url: 'https://www.storm.mg/feed', column: 'tw' },
-  { name: '報導者', url: 'https://public.twreporter.org/rss/twreporter-rss.xml', column: 'tw' },
-  { name: '關鍵評論網', url: 'https://feeds.feedburner.com/TheNewsLens', column: 'tw' },
-  { name: 'Peopo 公民新聞', url: 'https://www.peopo.org/peopo_agg/feed?post_u=1381', column: 'tw' },
+  { name: '報導者',   url: 'https://public.twreporter.org/rss/twreporter-rss.xml', column: 'tw' },
 
-  // ── Google News site: 查詢（補充來源）────────────
-  gn('udn.com', 'tw', '聯合新聞網'),
-  gn('chinatimes.com', 'tw', '中時電子報'),
-  gn('ettoday.net', 'tw', 'ETtoday'),
-  gn('tvbs.com.tw', 'tw', 'TVBS'),
-  gn('ftvnews.com.tw', 'tw', '民視新聞'),
-  gn('setn.com', 'tw', '三立新聞'),
+  // ── 台灣 Google News 主題（5 條，涵蓋三大分類）──
+  gnq('台灣政治 立法院 賴清德', 'tw', '政治', 'politics'),
+  gnq('台灣社會 治安 司法 事故', 'tw', '社會', 'society'),
+  gnq('台積電 半導體 AI 科技', 'tw', '科技民生', 'life'),
+  gnq('台灣財經 台股 房價 物價', 'tw', '財經民生', 'life'),
+  gnq('台灣醫療 食安 環境 民生', 'tw', '生活民生', 'life'),
 
-  // ── Google News 主題（台灣）──────────────────────
-  {
-    name: 'Google News 政治',
-    url: 'https://news.google.com/rss/search?q=台灣政治+立法院&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'politics',
-  },
-  {
-    name: 'Google News 外交',
-    url: 'https://news.google.com/rss/search?q=台灣外交+美台關係+邦交&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'politics',
-  },
-  {
-    name: 'Google News 國防',
-    url: 'https://news.google.com/rss/search?q=台灣國防+軍事+軍購&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'politics',
-  },
-  {
-    name: 'Google News 選舉',
-    url: 'https://news.google.com/rss/search?q=台灣選舉+民調+政黨&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'politics',
-  },
-  {
-    name: 'Google News 社會',
-    url: 'https://news.google.com/rss/search?q=台灣社會+治安+事故&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'society',
-  },
-  {
-    name: 'Google News 司法',
-    url: 'https://news.google.com/rss/search?q=台灣司法+法院+判決&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'society',
-  },
-  {
-    name: 'Google News 環境',
-    url: 'https://news.google.com/rss/search?q=台灣環境+氣候+空污&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'society',
-  },
-  {
-    name: 'Google News 財經',
-    url: 'https://news.google.com/rss/search?q=台灣財經+景氣+台股&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'life',
-  },
-  {
-    name: 'Google News 房市',
-    url: 'https://news.google.com/rss/search?q=台灣房市+房價+租金&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'life',
-  },
-  {
-    name: 'Google News 半導體',
-    url: 'https://news.google.com/rss/search?q=台積電+半導體+晶片&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'life',
-  },
-  {
-    name: 'Google News 科技',
-    url: 'https://news.google.com/rss/search?q=台灣科技+AI+新創&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'life',
-  },
-  {
-    name: 'Google News 民生',
-    url: 'https://news.google.com/rss/search?q=台灣物價+通膨+民生&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'life',
-  },
-  {
-    name: 'Google News 醫療',
-    url: 'https://news.google.com/rss/search?q=台灣醫療+健康+食安&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'life',
-  },
-  {
-    name: 'Google News 娛樂',
-    url: 'https://news.google.com/rss/search?q=台灣娛樂+藝人+電影&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'life',
-  },
-  {
-    name: 'Google News 體育',
-    url: 'https://news.google.com/rss/search?q=台灣體育+運動+賽事&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'tw',
-    defaultCategory: 'society',
-  },
-
-  // ── 國際視角 ─────────────────────────────────────
-  {
-    name: 'Google News Taiwan',
-    url: 'https://news.google.com/rss/search?q=Taiwan&hl=en-US&gl=US&ceid=US:en',
-    column: 'intl',
-  },
-  {
-    name: 'Google News 國際',
-    url: 'https://news.google.com/rss/search?q=Taiwan+international+news&hl=en-US&gl=US&ceid=US:en',
-    column: 'intl',
-  },
-  {
-    name: 'Google News 兩岸',
-    url: 'https://news.google.com/rss/search?q=兩岸關係+台海&hl=zh-TW&gl=TW&ceid=TW:zh-Hant',
-    column: 'intl',
-  },
-  {
-    name: 'Google News 台海安全',
-    url: 'https://news.google.com/rss/search?q=Taiwan+China+military+strait&hl=en-US&gl=US&ceid=US:en',
-    column: 'intl',
-  },
-  {
-    name: 'Google News 美中貿易',
-    url: 'https://news.google.com/rss/search?q=US+China+trade+tariff&hl=en-US&gl=US&ceid=US:en',
-    column: 'intl',
-  },
-  {
-    name: 'Google News 俄烏',
-    url: 'https://news.google.com/rss/search?q=Ukraine+Russia+war&hl=en-US&gl=US&ceid=US:en',
-    column: 'intl',
-  },
-  {
-    name: 'Google News 中東',
-    url: 'https://news.google.com/rss/search?q=Middle+East+Israel+Gaza&hl=en-US&gl=US&ceid=US:en',
-    column: 'intl',
-  },
-  {
-    name: 'Google News 亞太',
-    url: 'https://news.google.com/rss/search?q=Japan+Korea+Asia+Pacific&hl=en-US&gl=US&ceid=US:en',
-    column: 'intl',
-  },
-  {
-    name: 'Google News 全球經濟',
-    url: 'https://news.google.com/rss/search?q=global+economy+inflation+Fed&hl=en-US&gl=US&ceid=US:en',
-    column: 'intl',
-  },
-  {
-    name: 'Google News 中國',
-    url: 'https://news.google.com/rss/search?q=China+Xi+Jinping&hl=en-US&gl=US&ceid=US:en',
-    column: 'intl',
-  },
+  // ── 國際 Google News（5 條）─────────────────────
+  gnq('Taiwan politics diplomacy', 'intl', 'Taiwan', undefined, 'en-US', 'US', 'US:en'),
+  gnq('Taiwan China military strait security', 'intl', '台海安全', undefined, 'en-US', 'US', 'US:en'),
+  gnq('US China trade tariff economy', 'intl', '美中貿易', undefined, 'en-US', 'US', 'US:en'),
+  gnq('Ukraine Russia war Middle East', 'intl', '國際衝突', undefined, 'en-US', 'US', 'US:en'),
+  gnq('兩岸關係 台海 中共', 'intl', '兩岸'),
 ]
 
 function decodeEntities(str: string): string {

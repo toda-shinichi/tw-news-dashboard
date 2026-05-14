@@ -30,6 +30,7 @@ interface PageState {
     hotlist: boolean
   }
   error: { tw?: string; intl?: string }
+  building: { tw: boolean; intl: boolean }
 }
 
 const EMPTY_HOTDATA: HotData = { topics: [], keywords: [], people: [] }
@@ -42,6 +43,7 @@ const INITIAL_STATE: PageState = {
   hotlist: { tw: EMPTY_HOTDATA, intl: EMPTY_HOTDATA },
   loading: { tw: true, intl: true, summary: true, keywords: true, hotlist: true },
   error: {},
+  building: { tw: false, intl: false },
 }
 
 export default function HomePage() {
@@ -50,56 +52,65 @@ export default function HomePage() {
   const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
 
+  const safeFetch = useCallback(async (url: string) => {
+    try {
+      const r = await fetch(url)
+      if (!r.ok) return { _status: r.status }
+      return r.json()
+    } catch {
+      return { _status: 0 }
+    }
+  }, [])
+
   const fetchData = useCallback(async (activeTab: TabRange, force = false) => {
     const qs = force ? '&force=1' : ''
     setState(prev => ({
       ...prev,
       loading: { tw: true, intl: true, summary: true, keywords: true, hotlist: true },
       error: {},
+      building: { tw: false, intl: false },
     }))
 
-    // Fetch news first so hotlist can reuse the cache
-    const [twRes, intlRes] = await Promise.allSettled([
-      fetch(`/api/news?tab=${activeTab}&col=tw${qs}`).then(r => r.json()),
-      fetch(`/api/news?tab=${activeTab}&col=intl${qs}`).then(r => r.json()),
+    // Fetch news first so hotlist/keywords can reuse the populated cache
+    const [twData, intlData] = await Promise.all([
+      safeFetch(`/api/news?tab=${activeTab}&col=tw${qs}`),
+      safeFetch(`/api/news?tab=${activeTab}&col=intl${qs}`),
     ])
 
-    const [summaryRes, keywordsRes, hotlistRes] = await Promise.allSettled([
-      fetch(`/api/summary?tab=${activeTab}${qs}`).then(r => r.json()),
-      fetch(`/api/keywords?tab=${activeTab}${qs}`).then(r => r.json()),
-      fetch(`/api/hotlist?tab=${activeTab}${qs}`).then(r => r.json()),
+    const [summaryData, keywordsData, hotlistData] = await Promise.all([
+      safeFetch(`/api/summary?tab=${activeTab}${qs}`),
+      safeFetch(`/api/keywords?tab=${activeTab}${qs}`),
+      safeFetch(`/api/hotlist?tab=${activeTab}${qs}`),
     ])
+
+    const twItems: NewsItem[]   = twData?.items   ?? []
+    const intlItems: NewsItem[] = intlData?.items  ?? []
+    const twFailed   = twData?._status !== undefined
+    const intlFailed = intlData?._status !== undefined
 
     setState(prev => ({
       ...prev,
-      twNews: twRes.status === 'fulfilled' ? (twRes.value.items ?? []) : [],
-      intlNews: intlRes.status === 'fulfilled' ? (intlRes.value.items ?? []) : [],
-      summary:
-        summaryRes.status === 'fulfilled' ? (summaryRes.value.data ?? null) : null,
-      keywords:
-        keywordsRes.status === 'fulfilled' ? (keywordsRes.value.keywords ?? []) : [],
-      hotlist:
-        hotlistRes.status === 'fulfilled'
-          ? {
-              tw: hotlistRes.value.tw ?? EMPTY_HOTDATA,
-              intl: hotlistRes.value.intl ?? EMPTY_HOTDATA,
-            }
-          : { tw: EMPTY_HOTDATA, intl: EMPTY_HOTDATA },
-      updatedAt:
-        twRes.status === 'fulfilled' ? twRes.value.updatedAt : undefined,
+      twNews: twItems,
+      intlNews: intlItems,
+      summary:   summaryData?.data    ?? null,
+      keywords:  keywordsData?.keywords ?? [],
+      hotlist: {
+        tw:   hotlistData?.tw   ?? EMPTY_HOTDATA,
+        intl: hotlistData?.intl ?? EMPTY_HOTDATA,
+      },
+      updatedAt: twData?.updatedAt,
       loading: { tw: false, intl: false, summary: false, keywords: false, hotlist: false },
+      // building = server responded but store is empty (still fetching feeds)
+      building: {
+        tw:   !twFailed && twItems.length === 0,
+        intl: !intlFailed && intlItems.length === 0,
+      },
       error: {
-        tw:
-          twRes.status === 'rejected'
-            ? '台灣新聞暫時無法載入，請稍後再試'
-            : undefined,
-        intl:
-          intlRes.status === 'rejected'
-            ? '國際新聞暫時無法載入，請稍後再試'
-            : undefined,
+        tw:   twFailed   ? '台灣新聞暫時無法載入，請稍後再試' : undefined,
+        intl: intlFailed ? '國際新聞暫時無法載入，請稍後再試' : undefined,
       },
     }))
-  }, [])
+  }, [safeFetch])
 
   useEffect(() => {
     fetchData(tab)
@@ -166,6 +177,7 @@ export default function HomePage() {
             items={state.twNews}
             loading={state.loading.tw}
             error={state.error.tw}
+            building={state.building.tw}
             selectedKeyword={selectedKeyword}
           />
           <div className="md:border-l md:border-[#E8E4DC] md:pl-8">
@@ -175,6 +187,7 @@ export default function HomePage() {
               items={state.intlNews}
               loading={state.loading.intl}
               error={state.error.intl}
+              building={state.building.intl}
               selectedKeyword={selectedKeyword}
             />
           </div>
