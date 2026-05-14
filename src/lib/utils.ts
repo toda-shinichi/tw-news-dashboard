@@ -145,13 +145,18 @@ const HOT_STOPWORDS = new Set([
   '風傳', '報導者', '公視', '東森', '關鍵', '評論', '時報', '日報',
 ])
 
-export function computeHotKeywords(titles: string[], topN = 5): string[] {
+export function computeHotKeywords(
+  titles: string[],
+  topN = 5,
+  minLen = 2,
+  maxLen = 5,
+): string[] {
   if (titles.length < 3) return []
 
   const freq = new Map<string, number>()
   for (const title of titles) {
     const seen = new Set<string>()
-    for (let len = 2; len <= 5; len++) {
+    for (let len = minLen; len <= maxLen; len++) {
       for (let i = 0; i <= title.length - len; i++) {
         const w = title.slice(i, i + len)
         if (/^[一-鿿]+$/.test(w) && !HOT_STOPWORDS.has(w) && !seen.has(w)) {
@@ -179,6 +184,47 @@ export function computeHotKeywords(titles: string[], topN = 5): string[] {
   }
 
   return result
+}
+
+// Known people for category-filtered people extraction
+const KNOWN_PEOPLE = [
+  // 台灣政治人物
+  '賴清德', '蕭美琴', '卓榮泰', '鄭麗君',
+  '朱立倫', '韓國瑜', '侯友宜', '江啟臣', '趙少康',
+  '柯文哲', '黃國昌', '吳欣盈',
+  '盧秀燕', '張善政', '蔣萬安', '高虹安', '李四川', '謝國樑',
+  '鄭麗文', '黃世杰', '沈伯洋', '蘇巧慧', '張雅琳', '陳品安', '童子瑋',
+  '林右昌', '陳建仁', '蘇貞昌', '陳其邁', '黃偉哲',
+  // 台灣商界
+  '黃仁勳', '張忠謀', '劉德音', '魏哲家', '郭台銘', '張汝京',
+  '辜仲諒', '吳敏求', '王雪紅', '施振榮',
+  // 國際政治
+  '川普', '拜登', '賀錦麗', '馬斯克', '盧比歐', '裴洛西',
+  '習近平', '李強', '王毅', '丁薛祥',
+  '岸田文雄', '石破茂', '小泉進次郎',
+  '馬克宏', '梅茲', '史塔默', '蕭茨',
+  '澤倫斯基', '普丁', '金正恩',
+  '麥卡錫', '拜登',
+  // 台灣社會/娛樂
+  '林俊傑', '周杰倫', '蔡依林', '五月天', '孫燕姿',
+  '柯震東', '陳建州', '林志玲', '舒淇',
+  '陳時中', '王必勝', '莊人祥',
+]
+
+export function extractPeopleFromTitles(titles: string[], topN = 5): string[] {
+  if (titles.length === 0) return []
+  const freq = new Map<string, number>()
+  for (const title of titles) {
+    for (const name of KNOWN_PEOPLE) {
+      if (title.includes(name)) {
+        freq.set(name, (freq.get(name) || 0) + 1)
+      }
+    }
+  }
+  return [...freq.entries()]
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, topN)
+    .map(([name]) => name)
 }
 
 export function formatRelativeTime(iso: string): string {

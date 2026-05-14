@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import clsx from 'clsx'
 import { NewsItem, NewsCategory } from '@/types'
-import { computeHotKeywords } from '@/lib/utils'
+import { computeHotKeywords, extractPeopleFromTitles } from '@/lib/utils'
 
 interface HotData {
   topics: string[]
@@ -87,14 +87,22 @@ function HotColumn({
   filteredTitles: string[]
   isFiltered: boolean
 }) {
-  const computed = useMemo(
-    () => (isFiltered ? computeHotKeywords(filteredTitles, 5) : []),
+  const computedTopics = useMemo(
+    () => (isFiltered ? computeHotKeywords(filteredTitles, 5, 3, 6) : []),
+    [isFiltered, filteredTitles]
+  )
+  const computedKeywords = useMemo(
+    () => (isFiltered ? computeHotKeywords(filteredTitles, 5, 2, 3) : []),
+    [isFiltered, filteredTitles]
+  )
+  const computedPeople = useMemo(
+    () => (isFiltered ? extractPeopleFromTitles(filteredTitles, 5) : []),
     [isFiltered, filteredTitles]
   )
 
-  const displayTopics = isFiltered ? computed : data.topics
-  const displayKeywords = isFiltered ? computed : data.keywords
-  const displayPeople = data.people
+  const displayTopics = isFiltered ? computedTopics : data.topics
+  const displayKeywords = isFiltered ? computedKeywords : data.keywords
+  const displayPeople = isFiltered ? computedPeople : data.people
 
   const noData = isFiltered && filteredTitles.length < 3
 
