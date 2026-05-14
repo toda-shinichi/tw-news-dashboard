@@ -181,9 +181,16 @@ export default function HomePage() {
         </div>
       </main>
 
-      <footer className="max-w-7xl mx-auto px-4 sm:px-6 py-8 mt-4 border-t border-[#E8E4DC]">
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 py-8 mt-4 border-t border-[#E8E4DC] space-y-2">
         <p className="text-xs text-[#888888] text-center leading-relaxed">
-          資料來源：聯合新聞網・自由時報・中時電子報・ETtoday・TVBS・民視新聞・風傳媒・中央社・三立新聞・Google News・GDELT・NewsAPI
+          資料來源：聯合新聞網・自由時報・中時電子報・ETtoday・TVBS・民視新聞・風傳媒・中央社・三立新聞・Google News・GDELT・NewsAPI・Mediastack・GNews
+        </p>
+        <p className="text-xs text-[#AAAAAA] text-center">
+          © {new Date().getFullYear()} 子桓 Huan Hsu｜
+          <a href="mailto:huanhsuai@gmail.com" className="hover:text-[#5B7FA6] transition-colors">
+            huanhsuai@gmail.com
+          </a>
+          ・本站內容僅供資訊參考，新聞著作權歸各原始媒體所有
         </p>
       </footer>
     </div>
