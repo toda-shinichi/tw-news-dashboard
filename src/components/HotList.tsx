@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import clsx from 'clsx'
-import { NewsItem, NewsCategory } from '@/types'
-import { computeHotKeywords, extractPeopleFromTitles } from '@/lib/utils'
+import { NewsCategory, TabRange } from '@/types'
 
 interface HotData {
   topics: string[]
@@ -15,19 +14,15 @@ interface HotListProps {
   tw: HotData
   intl: HotData
   loading?: boolean
-  twItems?: NewsItem[]
-  intlItems?: NewsItem[]
+  tab: TabRange
 }
 
 const CATEGORY_TABS: { value: NewsCategory; label: string }[] = [
-  { value: 'all', label: '全部' },
+  { value: 'all',      label: '全部' },
   { value: 'politics', label: '政治' },
-  { value: 'society', label: '社會' },
-  { value: 'life', label: '民生' },
+  { value: 'society',  label: '社會' },
+  { value: 'life',     label: '民生' },
 ]
-
-// legacy categories stored in Redis before the 4-cat consolidation
-const LIFE_CATS = new Set(['life', 'entertainment', 'finance', 'tech'])
 
 function RankedList({ items, loading }: { items: string[]; loading?: boolean }) {
   if (loading) {
@@ -74,86 +69,60 @@ function TagRow({ items, loading }: { items: string[]; loading?: boolean }) {
   )
 }
 
-function HotColumn({
-  label,
-  data,
-  loading,
-  filteredTitles,
-  isFiltered,
-}: {
-  label: string
-  data: HotData
-  loading?: boolean
-  filteredTitles: string[]
-  isFiltered: boolean
-}) {
-  const computedTopics = useMemo(
-    () => (isFiltered ? computeHotKeywords(filteredTitles, 5, 3, 6) : []),
-    [isFiltered, filteredTitles]
-  )
-  const computedKeywords = useMemo(
-    () => (isFiltered ? computeHotKeywords(filteredTitles, 5, 2, 3) : []),
-    [isFiltered, filteredTitles]
-  )
-  const computedPeople = useMemo(
-    () => (isFiltered ? extractPeopleFromTitles(filteredTitles, 5) : []),
-    [isFiltered, filteredTitles]
-  )
-
-  const displayTopics = isFiltered ? computedTopics : data.topics
-  const displayKeywords = isFiltered ? computedKeywords : data.keywords
-  const displayPeople = isFiltered ? computedPeople : data.people
-
-  const noData = isFiltered && filteredTitles.length < 3
-
+function HotColumn({ label, data, loading }: { label: string; data: HotData; loading?: boolean }) {
   return (
     <div className="flex-1 min-w-0 space-y-4">
       <p className="text-xs font-medium text-[#888888] uppercase tracking-widest">{label}</p>
 
-      {noData ? (
-        <p className="text-sm text-[#AAAAAA]">此分類新聞量不足，請切換至「全部」查看 AI 分析結果。</p>
-      ) : (
-        <>
-          {/* 五大議題 */}
-          <div>
-            <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大議題</p>
-            <RankedList items={displayTopics} loading={loading} />
-          </div>
+      <div>
+        <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大議題</p>
+        <RankedList items={data.topics} loading={loading} />
+      </div>
 
-          {/* 五大關鍵字 */}
-          <div>
-            <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大關鍵字</p>
-            <TagRow items={displayKeywords} loading={loading} />
-          </div>
+      <div>
+        <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大關鍵字</p>
+        <TagRow items={data.keywords} loading={loading} />
+      </div>
 
-          {/* 五大人物 */}
-          <div>
-            <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大人物</p>
-            <TagRow items={displayPeople} loading={loading} />
-          </div>
-        </>
-      )}
+      <div>
+        <p className="text-xs text-[#5B7FA6] font-medium mb-2">五大人物</p>
+        <TagRow items={data.people} loading={loading} />
+      </div>
     </div>
   )
 }
 
-export default function HotList({ tw, intl, loading, twItems = [], intlItems = [] }: HotListProps) {
+export default function HotList({ tw, intl, loading, tab }: HotListProps) {
   const [selectedCat, setSelectedCat] = useState<NewsCategory>('all')
-  const isFiltered = selectedCat !== 'all'
+  const [catData, setCatData] = useState<{ tw: HotData; intl: HotData } | null>(null)
+  const [catLoading, setCatLoading] = useState(false)
 
-  const matchesCat = (cat: string | undefined) =>
-    selectedCat === 'life' ? LIFE_CATS.has(cat ?? '') : cat === selectedCat
+  useEffect(() => {
+    if (selectedCat === 'all') {
+      setCatData(null)
+      return
+    }
+    let cancelled = false
+    setCatLoading(true)
+    fetch(`/api/hotlist?tab=${tab}&cat=${selectedCat}`)
+      .then(r => r.json())
+      .then(d => {
+        if (!cancelled) setCatData({ tw: d.tw, intl: d.intl })
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setCatLoading(false) })
+    return () => { cancelled = true }
+  }, [selectedCat, tab])
 
-  const filteredTwTitles = useMemo(
-    () => (isFiltered ? twItems.filter(i => matchesCat(i.category)).map(i => i.title) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isFiltered, twItems, selectedCat]
-  )
-  const filteredIntlTitles = useMemo(
-    () => (isFiltered ? intlItems.filter(i => matchesCat(i.category)).map(i => i.title) : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isFiltered, intlItems, selectedCat]
-  )
+  // Also reset cat data when tab changes (different time range = different data)
+  useEffect(() => {
+    setCatData(null)
+    setSelectedCat('all')
+  }, [tab])
+
+  const displayTw   = catData?.tw   ?? tw
+  const displayIntl = catData?.intl ?? intl
+  const isLoading   = catLoading || loading
 
   return (
     <div className="bg-white border border-[#E8E4DC] rounded-xl p-5">
@@ -163,39 +132,27 @@ export default function HotList({ tw, intl, loading, twItems = [], intlItems = [
           <span className="text-xs font-medium text-[#E8844A] uppercase tracking-widest">熱門排行</span>
         </div>
         <div className="flex gap-1 flex-wrap">
-          {CATEGORY_TABS.map(tab => (
+          {CATEGORY_TABS.map(t => (
             <button
-              key={tab.value}
-              onClick={() => setSelectedCat(tab.value)}
+              key={t.value}
+              onClick={() => setSelectedCat(t.value)}
               className={clsx(
                 'px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors',
-                selectedCat === tab.value
+                selectedCat === t.value
                   ? 'bg-[#E8844A] text-white'
                   : 'bg-[#EFECE5] text-[#555555] hover:text-[#2C2C2C]'
               )}
             >
-              {tab.label}
+              {t.label}
             </button>
           ))}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <HotColumn
-          label="台灣"
-          data={tw}
-          loading={loading}
-          filteredTitles={filteredTwTitles}
-          isFiltered={isFiltered}
-        />
+        <HotColumn label="台灣" data={displayTw}   loading={isLoading} />
         <div className="md:border-l md:border-[#E8E4DC] md:pl-8">
-          <HotColumn
-            label="國際"
-            data={intl}
-            loading={loading}
-            filteredTitles={filteredIntlTitles}
-            isFiltered={isFiltered}
-          />
+          <HotColumn label="國際" data={displayIntl} loading={isLoading} />
         </div>
       </div>
     </div>

@@ -175,8 +175,7 @@ export default function HomePage() {
           tw={state.hotlist.tw}
           intl={state.hotlist.intl}
           loading={state.loading.hotlist}
-          twItems={state.twNews}
-          intlItems={state.intlNews}
+          tab={tab}
         />
 
         {/* 議題標籤 */}

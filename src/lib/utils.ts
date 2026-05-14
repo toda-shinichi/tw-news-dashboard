@@ -152,7 +152,37 @@ const CATEGORY_RULES_INTL = [
   { cat: 'politics' as NewsCategory, words: [...DOMESTIC_POLITICS, ...INTL_POLITICS] },
 ]
 
+// English keyword sets for classifying international (non-Chinese) titles
+const EN_POLITICS = [
+  'taiwan', 'trump', 'xi jinping', 'congress', 'senate', 'parliament', 'president',
+  'diplomacy', 'diplomatic', 'military', 'sanction', 'tariff', 'trade war', 'summit',
+  'beijing', 'pentagon', 'white house', 'minister', 'secretary', 'foreign',
+  'nato', 'g7', 'g20', 'election', 'war', 'strait', 'defense', 'security',
+  'geopolit', 'bilateral', 'alliance', 'ceasefire', 'conflict', 'invasion',
+]
+const EN_SOCIETY = [
+  'police', 'crime', 'court', 'trial', 'verdict', 'earthquake', 'flood', 'fire',
+  'protest', 'demonstration', 'strike', 'accident', 'shooting', 'killed', 'died',
+  'arrested', 'charged', 'school', 'education', 'climate', 'environment',
+]
+
+function classifyEnglishTitle(title: string): NewsCategory {
+  const lower = title.toLowerCase()
+  const ps = EN_POLITICS.filter(w => lower.includes(w)).length
+  const ss = EN_SOCIETY.filter(w => lower.includes(w)).length
+  if (ps > ss) return 'politics'
+  if (ss > 0) return 'society'
+  return 'life'
+}
+
 export function classifyCategory(title: string, column?: string): NewsCategory {
+  // If mostly English (less than 30% Chinese chars), use English classification
+  const cjk = (title.match(/[一-鿿]/g) ?? []).length
+  const nonSpace = title.replace(/\s/g, '').length
+  if (nonSpace > 0 && cjk / nonSpace < 0.3) {
+    return classifyEnglishTitle(title)
+  }
+
   const rules = column === 'tw' ? CATEGORY_RULES_TW : CATEGORY_RULES_INTL
   let best: NewsCategory | null = null
   let bestScore = 0
