@@ -1,8 +1,8 @@
 import OpenAI from 'openai'
 import { NewsItem, SentimentLabel, SummaryData } from '@/types'
 
-const MODEL_QUALITY = 'kimi-k2'
-const MODEL_FAST    = 'kimi-k2'
+const MODEL_QUALITY = 'gpt-5.4-mini-as'
+const MODEL_FAST    = 'gpt-5.4-mini-as'
 
 function getClient(): OpenAI {
   return new OpenAI({
@@ -141,7 +141,8 @@ export async function generateSummary(items: NewsItem[]): Promise<SummaryData> {
       }
     }
     return { ...EMPTY_SUMMARY, overview: '分析結果格式異常，請稍後再試。' }
-  } catch {
+  } catch (err) {
+    console.error('[generateSummary] model error:', MODEL_QUALITY, err)
     return { ...EMPTY_SUMMARY, overview: 'AI 分析服務暫時無法使用，請稍後再試。' }
   }
 }
