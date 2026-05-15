@@ -18,7 +18,7 @@ interface NewsColumnProps {
   selectedKeyword?: string | null
 }
 
-type FilterValue = NewsCategory | 'intl' | 'social'
+type FilterValue = NewsCategory | 'intl'
 
 const CATEGORY_TABS: { value: FilterValue; label: string }[] = [
   { value: 'all',      label: '全部' },
@@ -26,11 +26,7 @@ const CATEGORY_TABS: { value: FilterValue; label: string }[] = [
   { value: 'society',  label: '社會' },
   { value: 'life',     label: '民生' },
   { value: 'intl',     label: '國際' },
-  { value: 'social',   label: 'PTT・Dcard' },
 ]
-
-const isSocialPost = (item: NewsItem) =>
-  item.source === 'PTT 八卦板' || item.source === 'Dcard'
 
 const LIFE_CATS = new Set(['life', 'entertainment', 'finance', 'tech'])
 
@@ -49,16 +45,14 @@ export default function NewsColumn({
 
   const filteredItems = useMemo(() => {
     let result = items
-    if (selectedCat === 'social') {
-      result = result.filter(item => isSocialPost(item))
-    } else if (selectedCat === 'intl') {
-      result = result.filter(item => item.column === 'intl' && !isSocialPost(item))
+    if (selectedCat === 'intl') {
+      result = result.filter(item => item.column === 'intl')
     } else if (selectedCat === 'society') {
-      result = result.filter(item => item.category === 'society' && item.column === 'tw' && !isSocialPost(item))
+      result = result.filter(item => item.category === 'society' && item.column === 'tw')
     } else if (selectedCat === 'life') {
-      result = result.filter(item => LIFE_CATS.has(item.category ?? '') && item.column === 'tw' && !isSocialPost(item))
+      result = result.filter(item => LIFE_CATS.has(item.category ?? '') && item.column === 'tw')
     } else if (selectedCat === 'politics') {
-      result = result.filter(item => item.category === 'politics' && !isSocialPost(item))
+      result = result.filter(item => item.category === 'politics')
     }
     if (selectedKeyword) {
       result = result.filter(

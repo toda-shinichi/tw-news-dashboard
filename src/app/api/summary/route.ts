@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
   ])
   const allItems = [...twItems, ...intlItems]
 
-  // Pre-compute real keyword frequencies and category distribution
+  // Pre-compute real keyword frequencies and category distribution (full window)
   const topKeywords = computeKeywordCounts(allItems.map(i => i.title), 20)
   const categoryCounts = allItems.reduce<Record<string, number>>((acc, item) => {
     const cat = item.column === 'intl' ? 'intl' : (item.category ?? 'other')
@@ -43,7 +43,12 @@ export async function GET(req: NextRequest) {
   }, {})
   const stats: NewsStats = { topKeywords, categoryCounts, totalCount: allItems.length }
 
-  const data: SummaryData = await generateSummary(allItems, social, stats)
+  // AI analysis uses only the past 12h — more relevant for trend detection
+  const cutoff12h = Date.now() - 12 * 3600_000
+  const recent = allItems.filter(i => new Date(i.publishedAt).getTime() >= cutoff12h)
+  const aiItems = recent.length >= 20 ? recent : allItems
+
+  const data: SummaryData = await generateSummary(aiItems, social, stats)
 
   const response: SummaryResponse = {
     data,

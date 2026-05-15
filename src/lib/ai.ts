@@ -94,14 +94,6 @@ const EMPTY_SUMMARY: SummaryData = {
 
 function buildSocialBlock(s: SocialSignals): string {
   const lines: string[] = []
-  if (s.pttHot.length > 0) {
-    lines.push('[PTT 八卦板熱門（推文數排序）]')
-    s.pttHot.slice(0, 12).forEach(t => lines.push(`・${t}`))
-  }
-  if (s.dcardHot.length > 0) {
-    lines.push('[Dcard 熱門文章]')
-    s.dcardHot.slice(0, 10).forEach(t => lines.push(`・${t}`))
-  }
   if (s.googleTrends.length > 0) {
     lines.push('[Google Trends 台灣熱搜（過去 24 小時）]')
     lines.push(s.googleTrends.slice(0, 15).join('、'))
@@ -159,14 +151,14 @@ export async function generateSummary(items: NewsItem[], social?: SocialSignals,
         {
           role: 'user',
           content: [
-            '你是台灣社群輿情分析師，熟悉 PTT、Dcard、Instagram、Threads、YouTube 台灣社群的討論生態。',
-            '請綜合以下【數據摘要】、【新聞標題】（含部分英文國際新聞，請理解後以繁體中文分析）與【社群訊號】，全程用繁體中文輸出 JSON，不要其他文字。',
+            '你是台灣輿情分析師，熟悉台灣政治、社會、經濟、外交生態，能從大量新聞中萃取關鍵趨勢。',
+            '請綜合以下【數據摘要】、【過去12小時新聞標題】（含部分英文國際新聞，請理解後以繁體中文分析）與【社群訊號】，全程用繁體中文輸出 JSON，不要其他文字。',
             '',
             '格式：',
             '{"overview":"整體輿情深度摘要，必須150至300字，涵蓋：當期主要事件脈絡、各議題之間的關聯性、整體輿論情緒走向（樂觀/悲觀/焦慮/對立等），以及對台灣社會的潛在影響；文字通順、具分析深度，不可流水帳羅列","topics":["五大當前議題，每項格式為『議題名稱：具體說明內容』，說明部分需點出核心爭點、涉及對象或影響範圍（整項40字以內）"],"dynamics":["4至6項動向預測，整合正在醞釀中的發展與即將可能升溫的話題，說明趨勢方向與觸發條件（每項35字以內）"],"watchlist":["3至5項觀察清單，整合需長期追蹤的重要議題與今日特別警示，需具體說明風險或觀察重點（每項35字以內）"],"people":["當前最受關注的4至6位人物姓名"],"viral":["根據PTT/Dcard熱門文章與Google Trends熱搜，綜合評估5至10個最可能在台灣社群引爆討論的話題，優先納入社群訊號中已熱議者，說明討論族群與潛在爭議方向（每項35字以內）"]}',
             '',
             ...(stats ? ['【數據摘要】', buildStatsBlock(stats), ''] : []),
-            '【新聞標題（最新80則）】',
+            '【過去12小時新聞標題（最新80則）】',
             titles,
             ...(social ? ['', '【社群訊號】', buildSocialBlock(social)] : []),
             '',

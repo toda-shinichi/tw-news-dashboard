@@ -4,7 +4,6 @@ import { fetchNewsAPI } from './newsapi'
 import { fetchGDELT, fetchGDELTTaiwan } from './gdelt'
 import { fetchMediastack } from './mediastack'
 import { fetchGNews } from './gnews'
-import { fetchPTTAsNewsItems, fetchDcardAsNewsItems } from './social'
 import { filterByDateRange, classifyCategory } from './utils'
 import { NewsItem, NewsColumn, TabRange } from '@/types'
 
@@ -57,15 +56,13 @@ async function fetchFresh(col: NewsColumn, isBackfill: boolean): Promise<NewsIte
     : undefined
 
   if (col === 'tw') {
-    const [rss, api, gdelt, ext, ptt, dcard] = await Promise.all([
+    const [rss, api, gdelt, ext] = await Promise.all([
       fetchAllRSS('tw'),
       fetchNewsAPI(newsAPIFrom),
       fetchGDELTTaiwan(gdeltSpan, gdeltRecords),
       fetchExternalTW(isBackfill),
-      fetchPTTAsNewsItems(),
-      fetchDcardAsNewsItems(),
     ])
-    return [...rss, ...api, ...gdelt, ...ext, ...ptt, ...dcard]
+    return [...rss, ...api, ...gdelt, ...ext]
   } else {
     const [rss, gdelt] = await Promise.all([
       fetchAllRSS('intl'),

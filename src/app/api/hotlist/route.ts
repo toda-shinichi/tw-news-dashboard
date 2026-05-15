@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { extractHotList, HotList } from '@/lib/ai'
 import { cacheGet, cacheSet } from '@/lib/cache'
-import { dedupeByTitle, computeHotKeywords } from '@/lib/utils'
+import { dedupeByTitle } from '@/lib/utils'
 import { getAccumulatedNews } from '@/lib/newsStore'
 import { saveSnapshot } from '@/lib/history'
 import { NewsItem, TabRange, SummaryData } from '@/types'
@@ -23,8 +23,6 @@ function filterByCat(items: NewsItem[], cat: string) {
   )
 }
 
-const isSocialPost = (i: NewsItem) => i.source === 'PTT 八卦板' || i.source === 'Dcard'
-
 export async function GET(req: NextRequest) {
   const tab   = (req.nextUrl.searchParams.get('tab') || 'today') as TabRange
   const cat   = req.nextUrl.searchParams.get('cat') || ''
@@ -44,40 +42,24 @@ export async function GET(req: NextRequest) {
   const twDeduped   = dedupeByTitle(twItems)
   const intlDeduped = dedupeByTitle(intlItems)
 
-  // Category isolation rules:
-  // - social:   PTT/Dcard only — skip AI, return ranked titles directly
-  // - intl:     only column=intl articles
-  // - society / life: only domestic tw column, preventing intl/politics bleed
-  // - politics: tw politics + intl politics (both domestic and cross-strait)
-  // - all:      all tw articles (default)
   let twHot: HotList
   let lang: 'zh' | 'en' = 'zh'
+  let feedForAI: NewsItem[]
 
-  if (cat === 'social') {
-    const socialItems = twDeduped.filter(isSocialPost)
-    const titles = socialItems.map(i => i.title)
-    twHot = {
-      topics:   titles.slice(0, 5),
-      keywords: computeHotKeywords(titles, 5),
-      people:   [],
-    }
+  if (cat === 'intl') {
+    feedForAI = dedupeByTitle([...twItems, ...intlItems]).filter(i => i.column === 'intl')
+    lang = 'en'
+  } else if (cat === 'society' || cat === 'life') {
+    feedForAI = filterByCat(twDeduped, cat)
+  } else if (cat === 'politics') {
+    feedForAI = [
+      ...filterByCat(twDeduped, 'politics'),
+      ...filterByCat(intlDeduped, 'politics'),
+    ]
   } else {
-    let feedForAI: NewsItem[]
-    if (cat === 'intl') {
-      feedForAI = dedupeByTitle([...twItems, ...intlItems]).filter(i => i.column === 'intl' && !isSocialPost(i))
-      lang = 'en'
-    } else if (cat === 'society' || cat === 'life') {
-      feedForAI = filterByCat(twDeduped, cat).filter(i => !isSocialPost(i))
-    } else if (cat === 'politics') {
-      feedForAI = [
-        ...filterByCat(twDeduped, 'politics').filter(i => !isSocialPost(i)),
-        ...filterByCat(intlDeduped, 'politics'),
-      ]
-    } else {
-      feedForAI = twDeduped
-    }
-    twHot = await extractHotList(feedForAI.map(i => i.title), lang)
+    feedForAI = twDeduped
   }
+  twHot = await extractHotList(feedForAI.map(i => i.title), lang)
 
   const intlHot: HotList = { topics: [], keywords: [], people: [] }
 

@@ -16,7 +16,7 @@ interface HotListProps {
   tab: TabRange
 }
 
-type HotFilter = NewsCategory | 'intl' | 'social'
+type HotFilter = NewsCategory | 'intl'
 
 const CATEGORY_TABS: { value: HotFilter; label: string }[] = [
   { value: 'all',      label: '全部' },
@@ -24,7 +24,6 @@ const CATEGORY_TABS: { value: HotFilter; label: string }[] = [
   { value: 'society',  label: '社會' },
   { value: 'life',     label: '民生' },
   { value: 'intl',     label: '國際' },
-  { value: 'social',   label: 'PTT・Dcard' },
 ]
 
 function RankedList({ items, loading }: { items: string[]; loading?: boolean }) {
