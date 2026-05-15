@@ -47,6 +47,8 @@ const RSS_SOURCES: RSSSource[] = [
   // ── 台灣 Google News 補充（各類補充來源多樣性）──────────
   gnq('台灣外交 兩岸政策 國防 軍售', 'tw', '政治補充', 'politics'),
   gnq('台灣社會案件 意外 災害 食安', 'tw', '社會補充', 'society'),
+  gnq('台灣 命案 刑案 逮捕 起訴 嫌犯', 'tw', '刑案補充', 'society'),
+  gnq('台灣 車禍 火災 爆炸 搜救 失蹤', 'tw', '事故補充', 'society'),
   gnq('台積電 台股 科技 AI 房市', 'tw', '民生補充', 'life'),
 
   // ── 國際 Google News（5 條）─────────────────────────

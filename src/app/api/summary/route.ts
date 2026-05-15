@@ -12,7 +12,7 @@ export const maxDuration = 60
 export async function GET(req: NextRequest) {
   const tab = (req.nextUrl.searchParams.get('tab') || 'today') as TabRange
   const force = req.nextUrl.searchParams.get('force') === '1'
-  const cacheKey = `summary:${tab}`
+  const cacheKey = `summary:v2:${tab}`
 
   const cached = await cacheGet<SummaryResponse>(cacheKey)
   // Only serve cache if it has a valid (non-empty, non-error) overview

@@ -151,19 +151,47 @@ function HistoryPanel() {
               </div>
             )}
 
-            {selected.summary?.alerts && selected.summary.alerts.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-[#C04040] mb-1.5">警示</p>
-                <ul className="space-y-1">
-                  {selected.summary.alerts.map((a, i) => (
-                    <li key={i} className="text-sm text-[#2C2C2C] flex gap-2">
-                      <span className="text-[#C04040] flex-shrink-0">▲</span>
-                      {a}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {/* dynamics (new) or fallback to brewing+upcoming (legacy) */}
+            {(() => {
+              const items = selected.summary?.dynamics?.length
+                ? selected.summary.dynamics
+                : [...(selected.summary?.brewing ?? []), ...(selected.summary?.upcoming ?? [])]
+              if (!items.length) return null
+              return (
+                <div>
+                  <p className="text-xs font-semibold text-[#D4874A] mb-1.5">動向 & 升溫預測</p>
+                  <ul className="space-y-1">
+                    {items.map((a, i) => (
+                      <li key={i} className="text-sm text-[#2C2C2C] flex gap-2">
+                        <span className="text-[#D4874A] flex-shrink-0">→</span>
+                        {a}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            })()}
+
+            {/* watchlist (new) or fallback to longterm+alerts (legacy) */}
+            {(() => {
+              const items = selected.summary?.watchlist?.length
+                ? selected.summary.watchlist
+                : [...(selected.summary?.longterm ?? []), ...(selected.summary?.alerts ?? [])]
+              if (!items.length) return null
+              return (
+                <div>
+                  <p className="text-xs font-semibold text-[#7A62A8] mb-1.5">長期觀察 & 警示</p>
+                  <ul className="space-y-1">
+                    {items.map((a, i) => (
+                      <li key={i} className="text-sm text-[#2C2C2C] flex gap-2">
+                        <span className="text-[#7A62A8] flex-shrink-0">▲</span>
+                        {a}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )
+            })()}
 
             {(selected.hotlist?.tw?.topics?.length > 0 || selected.hotlist?.intl?.topics?.length > 0) && (
               <div className="grid grid-cols-2 gap-4 pt-1 border-t border-[#F0EDE6]">

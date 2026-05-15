@@ -46,12 +46,15 @@ export default function NewsColumn({
     let result = items
     if (selectedCat === 'intl') {
       result = result.filter(item => item.column === 'intl')
-    } else if (selectedCat !== 'all') {
-      result = result.filter(item =>
-        selectedCat === 'life'
-          ? LIFE_CATS.has(item.category ?? '')
-          : item.category === selectedCat
-      )
+    } else if (selectedCat === 'society') {
+      // Only domestic tw articles; exclude intl items misclassified as society
+      result = result.filter(item => item.category === 'society' && item.column === 'tw')
+    } else if (selectedCat === 'life') {
+      // Only domestic tw articles for life/entertainment/finance/tech
+      result = result.filter(item => LIFE_CATS.has(item.category ?? '') && item.column === 'tw')
+    } else if (selectedCat === 'politics') {
+      // Politics can include both domestic and international coverage
+      result = result.filter(item => item.category === 'politics')
     }
     if (selectedKeyword) {
       result = result.filter(

@@ -9,7 +9,7 @@ interface SummaryBannerProps {
 }
 
 interface SectionConfig {
-  key: keyof Pick<SummaryData, 'topics' | 'brewing' | 'upcoming' | 'longterm' | 'viral' | 'alerts'>
+  key: keyof Pick<SummaryData, 'topics' | 'dynamics' | 'watchlist' | 'viral'>
   title: string
   accent: string
   bg: string
@@ -17,12 +17,10 @@ interface SectionConfig {
 }
 
 const SECTIONS: SectionConfig[] = [
-  { key: 'topics',   title: '當前主要議題', accent: '#5B7FA6', bg: '#EBF0F7', numbered: true },
-  { key: 'brewing',  title: '醞釀中的動向', accent: '#D4874A', bg: '#FDF4EC' },
-  { key: 'upcoming', title: '即將升溫話題', accent: '#C0554A', bg: '#FDF0EF' },
-  { key: 'longterm', title: '長期觀察重點', accent: '#7A62A8', bg: '#F2EFF8' },
-  { key: 'viral',    title: 'AI 預測社群潛力', accent: '#C2477A', bg: '#FDF0F5' },
-  { key: 'alerts',   title: '今日警示',     accent: '#B84040', bg: '#FDF0EF' },
+  { key: 'topics',    title: '當前主要議題',      accent: '#5B7FA6', bg: '#EBF0F7', numbered: true },
+  { key: 'dynamics',  title: '動向 & 升溫預測',   accent: '#D4874A', bg: '#FDF4EC' },
+  { key: 'watchlist', title: '長期觀察 & 今日警示', accent: '#7A62A8', bg: '#F2EFF8' },
+  { key: 'viral',     title: 'AI 預測社群潛力',   accent: '#C2477A', bg: '#FDF0F5' },
 ]
 
 function Section({ title, items, accent, bg, numbered }: SectionConfig & { items: string[] }) {
@@ -269,10 +267,10 @@ export default function SummaryBanner({ data, loading }: SummaryBannerProps) {
           {/* 當前話題人物（可點擊） */}
           {data.people?.length > 0 && <PeopleRow people={data.people} />}
 
-          {/* 六格分析 */}
+          {/* 四格分析 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {SECTIONS.map(({ key, ...rest }) => (
-              <Section key={key} {...rest} items={data[key] ?? []} />
+              <Section key={key} {...rest} items={(data[key] as string[] | undefined) ?? []} />
             ))}
           </div>
         </div>

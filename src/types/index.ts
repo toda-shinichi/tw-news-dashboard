@@ -28,12 +28,15 @@ export interface NewsResponse {
 export interface SummaryData {
   overview: string
   topics: string[]
-  brewing: string[]
-  upcoming: string[]
-  longterm: string[]
+  dynamics: string[]   // 醞釀動向 & 即將升溫（merged）
+  watchlist: string[]  // 長期觀察 & 今日警示（merged）
   people: string[]
   viral: string[]
-  alerts: string[]
+  // Legacy fields — kept for reading old cache/history snapshots
+  brewing?: string[]
+  upcoming?: string[]
+  longterm?: string[]
+  alerts?: string[]
 }
 
 export interface SummaryResponse {
