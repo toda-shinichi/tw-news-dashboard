@@ -15,7 +15,7 @@ const LIFE_DEDUP_TTL = 3600
 
 const FETCH_INTERVAL_MS = 15 * 60 * 1000   // 15 min: RSS + GDELT
 const EXT_INTERVAL_MS   = 24 * 60 * 60 * 1000 // 24 hr: Mediastack + GNews (quota 保護)
-const MAX_ITEMS = 500
+const MAX_ITEMS = 2000
 const MAX_DAYS  = 1
 const TTL = 90_000  // 25 hr — slightly over 1 day so fetch cycles don't race expiry
 
