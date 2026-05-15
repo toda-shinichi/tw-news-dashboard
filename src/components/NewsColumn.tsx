@@ -68,7 +68,10 @@ export default function NewsColumn({
     return result
   }, [items, selectedCat, selectedKeyword])
 
-  useEffect(() => { setPage(1) }, [selectedCat, selectedKeyword])
+  useEffect(() => {
+    setPage(1)
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [selectedCat, selectedKeyword])
 
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE))
   const displayItems = filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)

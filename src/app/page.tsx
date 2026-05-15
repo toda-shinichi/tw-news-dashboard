@@ -93,10 +93,17 @@ export default function HomePage() {
     const intlItems: NewsItem[] = intlData?.items  ?? []
     const newsFailed = twData?._status !== undefined && intlData?._status !== undefined
 
-    // Merge and sort all news by date descending
-    const allItems: NewsItem[] = [...twItems, ...intlItems].sort(
+    // intl first so intl version wins when same story appears in both columns
+    const rawAll = [...intlItems, ...twItems].sort(
       (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
     )
+    const seenTitles = new Set<string>()
+    const allItems: NewsItem[] = rawAll.filter(item => {
+      const key = item.title.slice(0, 25)
+      if (seenTitles.has(key)) return false
+      seenTitles.add(key)
+      return true
+    })
 
     setState(prev => ({
       ...prev,
