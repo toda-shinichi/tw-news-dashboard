@@ -186,14 +186,14 @@ export default function HomePage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <TabBar active={tab} onChange={handleTabChange} />
           <span className="text-xs text-[#888888]">
-            {tab === 'today' ? '過去 24 小時' : ''}資料每 6 小時更新一次
+            {tab === 'today' ? '過去 24 小時' : tab === '3days' ? '過去 3 天' : '過去 7 天'}・每 15 分鐘更新一次
           </span>
         </div>
 
         {/* 單欄新聞（台灣 + 國際合併，可用「國際」分類篩選） */}
         <NewsColumn
-          title="台灣輿情"
-          subtitle="台灣主流媒體 · Google News · NewsAPI · GDELT"
+          title="輿情一覽"
+          subtitle="台灣主流媒體 · Google News · NewsAPI · GDELT · PTT · Dcard"
           items={state.allNews}
           loading={newsLoading}
           error={state.error.news}

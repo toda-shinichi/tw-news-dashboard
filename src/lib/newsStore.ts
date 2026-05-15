@@ -4,13 +4,14 @@ import { fetchNewsAPI } from './newsapi'
 import { fetchGDELT, fetchGDELTTaiwan } from './gdelt'
 import { fetchMediastack } from './mediastack'
 import { fetchGNews } from './gnews'
+import { fetchPTTAsNewsItems, fetchDcardAsNewsItems } from './social'
 import { filterByDateRange, classifyCategory } from './utils'
 import { NewsItem, NewsColumn, TabRange } from '@/types'
 
 const FETCH_INTERVAL_MS = 15 * 60 * 1000   // 15 min: RSS + GDELT
 const EXT_INTERVAL_MS   = 24 * 60 * 60 * 1000 // 24 hr: Mediastack + GNews (quota 保護)
-const MAX_ITEMS = 800
-const MAX_DAYS  = 30
+const MAX_ITEMS = 2000
+const MAX_DAYS  = 7
 const TTL = MAX_DAYS * 86_400
 
 function mergeStore(incoming: NewsItem[], existing: NewsItem[]): NewsItem[] {
@@ -49,13 +50,15 @@ async function fetchFresh(col: NewsColumn, isBackfill: boolean): Promise<NewsIte
   const gdeltSpan = isBackfill ? '30d' : '7d'
 
   if (col === 'tw') {
-    const [rss, api, gdelt, ext] = await Promise.all([
+    const [rss, api, gdelt, ext, ptt, dcard] = await Promise.all([
       fetchAllRSS('tw'),
       fetchNewsAPI(),
       fetchGDELTTaiwan(gdeltSpan),
       fetchExternalTW(isBackfill),
+      fetchPTTAsNewsItems(),
+      fetchDcardAsNewsItems(),
     ])
-    return [...rss, ...api, ...gdelt, ...ext]
+    return [...rss, ...api, ...gdelt, ...ext, ...ptt, ...dcard]
   } else {
     const [rss, gdelt] = await Promise.all([
       fetchAllRSS('intl'),

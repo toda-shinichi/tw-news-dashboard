@@ -79,8 +79,8 @@ export default function NewsColumn({
         {subtitle && <p className="text-xs text-[#888888] mt-0.5">{subtitle}</p>}
       </div>
 
-      {/* Category tabs */}
-      {!loading && !error && (
+      {/* Category tabs — always visible so layout doesn't jump during refresh */}
+      {!error && (
         <div className="flex gap-1 flex-wrap">
           {CATEGORY_TABS.map(tab => (
             <button
@@ -105,7 +105,16 @@ export default function NewsColumn({
         </div>
       )}
 
-      {loading && <LoadingState count={5} />}
+      {/* First-load skeleton (no data yet) */}
+      {loading && items.length === 0 && <LoadingState count={5} />}
+
+      {/* Refresh-in-progress indicator when data already exists */}
+      {loading && items.length > 0 && (
+        <div className="text-xs text-[#5B7FA6] bg-[#EBF0F7] rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <span className="animate-spin inline-block">⟳</span>
+          正在更新新聞…
+        </div>
+      )}
 
       {!loading && error && (
         <div className="text-sm text-red-500 bg-red-50 rounded-lg p-3">{error}</div>
@@ -119,18 +128,19 @@ export default function NewsColumn({
         </div>
       )}
 
-      {!loading && !error && !building && displayItems.length === 0 && (
+      {!error && !building && displayItems.length === 0 && !loading && (
         <div className="text-sm text-[#888888] text-center py-12">
           {items.length > 0 ? '此分類無符合條件的新聞' : '此時段無新聞資料'}
         </div>
       )}
 
-      {!loading && !error && displayItems.map(item => (
+      {/* Show articles even while refreshing (stale-while-reloading) */}
+      {!error && displayItems.map(item => (
         <NewsCard key={item.id} item={item} />
       ))}
 
       {/* Pagination */}
-      {!loading && !error && filteredItems.length > PAGE_SIZE && (
+      {!error && filteredItems.length > PAGE_SIZE && (
         <div className="flex items-center justify-between pt-1">
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
