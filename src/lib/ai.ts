@@ -201,7 +201,7 @@ export async function generateSummary(items: NewsItem[], social?: SocialSignals,
             '  "society_issues": ["依社會新聞數量多寡或重要性，條列5至8項當前最重要社會議題，格式：議題名稱：說明（整項40字以內）"],',
             '  "intl_issues": ["依國際新聞數量多寡或重要性，條列5至8項當前最重要國際議題，格式：議題名稱：說明（整項40字以內）"],',
             '  "life_issues": ["依民生新聞數量多寡或重要性，條列5至8項當前最重要民生議題，格式：議題名稱：說明（整項40字以內）"],',
-            '  "people": ["當前最受關注的4至6位人物姓名"],',
+            '  "people": ["依新聞標題出現頻率，列出過去24小時曝光最多的8至10位人物姓名（依頻率高低排列）"],',
             '  "viral": ["嚴格根據上方新聞標題中實際出現的事件，評估3至5個最可能在台灣社群引爆討論的話題；若有社群訊號則優先參考。絕對不得自行創造未出現的事件。格式：話題名稱：說明（35字以內）"]',
             '}',
             '',
@@ -228,7 +228,7 @@ export async function generateSummary(items: NewsItem[], social?: SocialSignals,
         society_issues:   Array.isArray(parsed.society_issues)   ? parsed.society_issues.slice(0, 8)   : [],
         intl_issues:      Array.isArray(parsed.intl_issues)      ? parsed.intl_issues.slice(0, 8)      : [],
         life_issues:      Array.isArray(parsed.life_issues)      ? parsed.life_issues.slice(0, 8)      : [],
-        people:           Array.isArray(parsed.people)           ? parsed.people.slice(0, 6)           : [],
+        people:           Array.isArray(parsed.people)           ? parsed.people.slice(0, 10)          : [],
         viral:            Array.isArray(parsed.viral)            ? parsed.viral.slice(0, 5)            : [],
       }
     }
@@ -258,27 +258,27 @@ export async function extractKeywords(
         {
           role: 'user',
           content:
-            '從標題萃取關鍵詞，只輸出 JSON 陣列，不要其他文字：\n標題：美日峰會、台灣安全、日本軍費\n輸出：',
+            '從標題萃取議題焦點關鍵詞，只輸出 JSON 陣列，不要其他文字：\n標題：美日峰會、台灣安全、日本軍費、詐騙集團案、健保漲價\n輸出：',
         },
         {
           role: 'assistant',
           content:
-            '[{"word":"美日峰會","count":3},{"word":"台灣安全","count":2},{"word":"日本軍費","count":1}]',
+            '[{"word":"美日峰會","count":3},{"word":"台灣安全","count":2},{"word":"日本軍費","count":2},{"word":"詐騙集團","count":1},{"word":"健保漲價","count":1}]',
         },
         {
           role: 'user',
-          content: `從標題萃取 10–15 個最重要的高頻關鍵詞（人名、地名、事件），只輸出 JSON 陣列，不要其他文字：\n標題：${titles}\n輸出：`,
+          content: `從標題萃取 15–20 個當前最值得關注的議題焦點關鍵詞。範圍不限：人名、地名、事件、案件、政策、法案、組織機構、爭議、社會現象、經濟指標等，凡是目前討論度高或重要性高的詞彙均可。依重要性與出現頻率排序，只輸出 JSON 陣列，不要其他文字：\n標題：${titles}\n輸出：`,
         },
       ],
       temperature: 0,
-      max_tokens: 500,
+      max_tokens: 800,
     })
 
     const text = resp.choices[0]?.message?.content?.trim() || '[]'
     const jsonMatch = text.match(/\[[\s\S]*?\]/)
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0])
-      return Array.isArray(parsed) ? parsed.slice(0, 15) : []
+      return Array.isArray(parsed) ? parsed.slice(0, 20) : []
     }
     return []
   } catch {
