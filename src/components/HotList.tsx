@@ -16,11 +16,14 @@ interface HotListProps {
   tab: TabRange
 }
 
-const CATEGORY_TABS: { value: NewsCategory; label: string }[] = [
+type HotFilter = NewsCategory | 'intl'
+
+const CATEGORY_TABS: { value: HotFilter; label: string }[] = [
   { value: 'all',      label: '全部' },
   { value: 'politics', label: '政治' },
   { value: 'society',  label: '社會' },
   { value: 'life',     label: '民生' },
+  { value: 'intl',     label: '國際' },
 ]
 
 function RankedList({ items, loading }: { items: string[]; loading?: boolean }) {
@@ -92,7 +95,7 @@ function HotColumn({ label, data, loading }: { label: string; data: HotData; loa
 }
 
 export default function HotList({ tw, loading, tab }: HotListProps) {
-  const [selectedCat, setSelectedCat] = useState<NewsCategory>('all')
+  const [selectedCat, setSelectedCat] = useState<HotFilter>('all')
   const [catData, setCatData] = useState<HotData | null>(null)
   const [catLoading, setCatLoading] = useState(false)
 
@@ -115,7 +118,7 @@ export default function HotList({ tw, loading, tab }: HotListProps) {
 
   useEffect(() => {
     setCatData(null)
-    setSelectedCat('all')
+    setSelectedCat('all' as HotFilter)
   }, [tab])
 
   const displayTw = catData ?? tw

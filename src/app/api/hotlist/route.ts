@@ -42,13 +42,30 @@ export async function GET(req: NextRequest) {
   const twDeduped   = dedupeByTitle(twItems)
   const intlDeduped = dedupeByTitle(intlItems)
 
-  const twFiltered   = cat && cat !== 'all' ? filterByCat(twDeduped,   cat) : twDeduped
-  const intlFiltered = cat && cat !== 'all' ? filterByCat(intlDeduped, cat) : intlDeduped
+  // Category isolation rules:
+  // - intl:    only column=intl articles (from both stores)
+  // - society / life: only domestic tw column, preventing intl/politics bleed
+  // - politics: tw politics + intl politics (both domestic and cross-strait)
+  // - all:     all tw articles (default, matches what the main column shows)
+  let feedForAI: NewsItem[]
+  let lang: 'zh' | 'en' = 'zh'
 
-  const [twHot, intlHot] = await Promise.all([
-    extractHotList(twFiltered.map(i => i.title),   'zh'),
-    extractHotList(intlFiltered.map(i => i.title), 'en'),
-  ])
+  if (cat === 'intl') {
+    feedForAI = dedupeByTitle([...twItems, ...intlItems]).filter(i => i.column === 'intl')
+    lang = 'en'
+  } else if (cat === 'society' || cat === 'life') {
+    feedForAI = filterByCat(twDeduped, cat)
+  } else if (cat === 'politics') {
+    feedForAI = [
+      ...filterByCat(twDeduped, 'politics'),
+      ...filterByCat(intlDeduped, 'politics'),
+    ]
+  } else {
+    feedForAI = twDeduped
+  }
+
+  const twHot  = await extractHotList(feedForAI.map(i => i.title), lang)
+  const intlHot: HotList = { topics: [], keywords: [], people: [] }
 
   const response: HotListResponse = { tw: twHot, intl: intlHot, fromCache: false }
   await cacheSet(cacheKey, response, 1800)
