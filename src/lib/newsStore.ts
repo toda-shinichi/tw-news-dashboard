@@ -121,7 +121,12 @@ export async function getAccumulatedNews(
     // If locked, another fetch is in flight — return stale data immediately
   }
 
-  // Apply Chinese filter at read time so old cached data is also cleaned up
-  const chineseItems = items.filter(item => isChineseText(item.title))
+  // Apply Chinese filter + backfill category on any old cache entries that lack it
+  const chineseItems = items
+    .filter(item => isChineseText(item.title))
+    .map(item => ({
+      ...item,
+      category: item.category ?? classifyCategory(item.title, item.column),
+    }))
   return filterByDateRange(chineseItems, tab)
 }
