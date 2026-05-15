@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { extractKeywords } from '@/lib/ai'
+import { computeKeywordCounts } from '@/lib/utils'
 import { cacheGet, cacheSet } from '@/lib/cache'
 import { getAccumulatedNews } from '@/lib/newsStore'
 import { TabRange, KeywordsResponse } from '@/types'
 
 export const runtime = 'nodejs'
-export const maxDuration = 20
+export const maxDuration = 10
 
 export async function GET(req: NextRequest) {
   const tab = (req.nextUrl.searchParams.get('tab') || 'today') as TabRange
@@ -23,13 +23,10 @@ export async function GET(req: NextRequest) {
   ])
   const allItems = [...twItems, ...intlItems]
 
-  const keywords = await extractKeywords(allItems)
+  // Real frequency count across all titles — no AI guessing
+  const keywords = computeKeywordCounts(allItems.map(i => i.title), 30)
 
-  const response: KeywordsResponse = {
-    keywords,
-    fromCache: false,
-  }
-
-  await cacheSet(cacheKey, response)
+  const response: KeywordsResponse = { keywords, fromCache: false }
+  await cacheSet(cacheKey, response, 900) // 15-min cache
   return NextResponse.json(response)
 }

@@ -241,6 +241,47 @@ const HOT_STOPWORDS = new Set([
   '風傳', '報導者', '公視', '東森', '關鍵', '評論', '時報', '日報',
 ])
 
+// Returns top keywords with real frequency counts across all titles
+export function computeKeywordCounts(
+  titles: string[],
+  topN = 25,
+  minLen = 2,
+  maxLen = 5,
+): Array<{ word: string; count: number }> {
+  if (titles.length < 3) return []
+
+  const freq = new Map<string, number>()
+  for (const title of titles) {
+    const seen = new Set<string>()
+    for (let len = minLen; len <= maxLen; len++) {
+      for (let i = 0; i <= title.length - len; i++) {
+        const w = title.slice(i, i + len)
+        if (/^[一-鿿]+$/.test(w) && !HOT_STOPWORDS.has(w) && !seen.has(w)) {
+          seen.add(w)
+          freq.set(w, (freq.get(w) || 0) + 1)
+        }
+      }
+    }
+  }
+
+  // Lower threshold than computeHotKeywords to surface more terms
+  const minCount = Math.max(2, Math.ceil(titles.length * 0.02))
+
+  const sorted = [...freq.entries()]
+    .filter(([, c]) => c >= minCount)
+    .sort(([wa, a], [wb, b]) => b - a || wb.length - wa.length)
+
+  const result: Array<{ word: string; count: number }> = []
+  for (const [word, count] of sorted) {
+    if (!result.some(r => r.word.includes(word) || word.includes(r.word))) {
+      result.push({ word, count })
+    }
+    if (result.length >= topN) break
+  }
+
+  return result
+}
+
 export function computeHotKeywords(
   titles: string[],
   topN = 5,

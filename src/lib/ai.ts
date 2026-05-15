@@ -2,6 +2,12 @@ import OpenAI from 'openai'
 import { NewsItem, SentimentLabel, SummaryData } from '@/types'
 import type { SocialSignals } from './social'
 
+export interface NewsStats {
+  topKeywords: Array<{ word: string; count: number }>
+  categoryCounts: Record<string, number>
+  totalCount: number
+}
+
 const MODEL_QUALITY = 'gpt-5.4-mini-as'
 const MODEL_FAST    = 'gpt-5.4-mini-as'
 
@@ -103,7 +109,25 @@ function buildSocialBlock(s: SocialSignals): string {
   return lines.join('\n')
 }
 
-export async function generateSummary(items: NewsItem[], social?: SocialSignals): Promise<SummaryData> {
+function buildStatsBlock(stats: NewsStats): string {
+  const catLine = Object.entries(stats.categoryCounts)
+    .sort(([, a], [, b]) => b - a)
+    .map(([cat, n]) => {
+      const label: Record<string, string> = { politics: '政治', society: '社會', life: '民生', intl: '國際' }
+      return `${label[cat] ?? cat} ${n} 篇`
+    })
+    .join('、')
+  const kwLine = stats.topKeywords
+    .slice(0, 20)
+    .map(({ word, count }) => `${word}(${count})`)
+    .join('、')
+  return [
+    `【新聞數量統計】總計 ${stats.totalCount} 篇｜${catLine}`,
+    `【高頻詞彙（真實計算）】${kwLine}`,
+  ].join('\n')
+}
+
+export async function generateSummary(items: NewsItem[], social?: SocialSignals, stats?: NewsStats): Promise<SummaryData> {
   if (!process.env.CPA_API_KEY)
     return {
       ...EMPTY_SUMMARY,
@@ -114,7 +138,7 @@ export async function generateSummary(items: NewsItem[], social?: SocialSignals)
 
   const client = getClient()
   const titles = items
-    .slice(0, 40)
+    .slice(0, 80)
     .map((item, i) => `${i + 1}. ${item.title}`)
     .join('\n')
 
@@ -141,7 +165,8 @@ export async function generateSummary(items: NewsItem[], social?: SocialSignals)
             '格式：',
             '{"overview":"整體輿情深度摘要，必須150至300字，涵蓋：當期主要事件脈絡、各議題之間的關聯性、整體輿論情緒走向（樂觀/悲觀/焦慮/對立等），以及對台灣社會的潛在影響；文字通順、具分析深度，不可流水帳羅列","topics":["五大當前議題，每項格式為『議題名稱：具體說明內容』，說明部分需點出核心爭點、涉及對象或影響範圍（整項40字以內）"],"dynamics":["4至6項動向預測，整合正在醞釀中的發展與即將可能升溫的話題，說明趨勢方向與觸發條件（每項35字以內）"],"watchlist":["3至5項觀察清單，整合需長期追蹤的重要議題與今日特別警示，需具體說明風險或觀察重點（每項35字以內）"],"people":["當前最受關注的4至6位人物姓名"],"viral":["根據PTT/Dcard熱門文章與Google Trends熱搜，綜合評估5至10個最可能在台灣社群引爆討論的話題，優先納入社群訊號中已熱議者，說明討論族群與潛在爭議方向（每項35字以內）"]}',
             '',
-            '【新聞標題】',
+            ...(stats ? ['【數據摘要】', buildStatsBlock(stats), ''] : []),
+            '【新聞標題（最新80則）】',
             titles,
             ...(social ? ['', '【社群訊號】', buildSocialBlock(social)] : []),
             '',

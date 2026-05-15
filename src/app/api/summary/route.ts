@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { generateSummary } from '@/lib/ai'
+import { generateSummary, NewsStats } from '@/lib/ai'
 import { cacheGet, cacheSet } from '@/lib/cache'
 import { getAccumulatedNews } from '@/lib/newsStore'
 import { saveSnapshot } from '@/lib/history'
 import { fetchSocialSignals } from '@/lib/social'
-import { TabRange, SummaryResponse, SummaryData } from '@/types'
+import { computeKeywordCounts } from '@/lib/utils'
+import { TabRange, SummaryResponse, SummaryData, NewsItem } from '@/types'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -31,7 +32,16 @@ export async function GET(req: NextRequest) {
   ])
   const allItems = [...twItems, ...intlItems]
 
-  const data: SummaryData = await generateSummary(allItems, social)
+  // Pre-compute real keyword frequencies and category distribution
+  const topKeywords = computeKeywordCounts(allItems.map(i => i.title), 20)
+  const categoryCounts = allItems.reduce<Record<string, number>>((acc, item) => {
+    const cat = item.column === 'intl' ? 'intl' : (item.category ?? 'other')
+    acc[cat] = (acc[cat] ?? 0) + 1
+    return acc
+  }, {})
+  const stats: NewsStats = { topKeywords, categoryCounts, totalCount: allItems.length }
+
+  const data: SummaryData = await generateSummary(allItems, social, stats)
 
   const response: SummaryResponse = {
     data,

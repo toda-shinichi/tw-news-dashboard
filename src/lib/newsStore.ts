@@ -95,12 +95,15 @@ export async function getAccumulatedNews(
         const fresh = await fetchFresh(col, isBackfill)
         const categorized = fresh.map(item => ({
           ...item,
-          // Trust source-tagged category (from defaultCategory on RSS feeds);
-          // only run keyword classifier for items with no category set.
           category: item.category ?? classifyCategory(item.title, col),
         }))
         const merged = mergeStore(categorized, items)
-        items = merged
+        // Re-classify the entire store on every refresh so that items cached
+        // before keyword rules improved get corrected automatically.
+        items = merged.map(item => ({
+          ...item,
+          category: classifyCategory(item.title, col),
+        }))
         await Promise.all([
           cacheSet(accKey, items, TTL),
           cacheSet(tsKey, Date.now(), TTL),
