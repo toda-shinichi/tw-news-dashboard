@@ -4,21 +4,83 @@ import { hashString } from './utils'
 import type { NewsItem } from '@/types'
 
 export interface SocialSignals {
-  pttHot: string[]      // PTT 八卦板熱門標題（推文數排序）
-  dcardHot: string[]    // Dcard 熱門文章標題
-  googleTrends: string[] // Google Trends 台灣熱搜關鍵字
+  pttHot: string[]
+  dcardHot: string[]
+  googleTrends: string[]
 }
 
 const SOCIAL_CACHE_KEY = 'social:signals'
-const SOCIAL_TTL = 20 * 60 // 20 分鐘
+const SOCIAL_TTL = 20 * 60
 
-interface PTTArticle {
-  href: string
-  title: string
-  nrec: string
-  date: string   // format: "M/DD"
-  author?: string
+// ── PTT 八卦板 (Atom feed) ────────────────────────────────────────────────────
+
+interface AtomEntry {
+  title: string | { _: string }
+  link: { $: { href: string } } | string
+  updated?: string
+  published?: string
 }
+
+async function fetchPTTAtom(): Promise<NewsItem[]> {
+  try {
+    const r = await fetch('https://www.ptt.cc/atom/Gossiping.xml', {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        Accept: 'application/xml, text/xml, */*',
+        Cookie: 'over18=1',
+      },
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!r.ok) {
+      console.warn('[PTT] atom fetch failed:', r.status, r.statusText)
+      return []
+    }
+    const xml = await r.text()
+    const parsed = await xml2js.parseStringPromise(xml, { explicitArray: false })
+    const entries: AtomEntry[] = parsed?.feed?.entry
+    if (!entries) {
+      console.warn('[PTT] atom: no entries found')
+      return []
+    }
+    const arr = Array.isArray(entries) ? entries : [entries]
+    return arr
+      .map(entry => {
+        const title = typeof entry.title === 'string'
+          ? entry.title
+          : (entry.title as { _: string })?._  ?? ''
+        const href = typeof entry.link === 'object'
+          ? (entry.link as { $: { href: string } }).$?.href ?? ''
+          : ''
+        const dateStr = entry.updated ?? entry.published ?? ''
+        if (!title || !href || title.includes('本文已被刪除')) return null
+        return {
+          id: hashString('ptt:' + href),
+          title,
+          url: href.startsWith('http') ? href : `https://www.ptt.cc${href}`,
+          source: 'PTT 八卦板',
+          publishedAt: dateStr ? new Date(dateStr).toISOString() : new Date().toISOString(),
+          column: 'tw' as const,
+          category: undefined,
+        } as NewsItem
+      })
+      .filter((x): x is NewsItem => x !== null)
+      .slice(0, 20)
+  } catch (err) {
+    console.warn('[PTT] atom error:', err)
+    return []
+  }
+}
+
+export async function fetchPTTAsNewsItems(): Promise<NewsItem[]> {
+  return fetchPTTAtom()
+}
+
+async function fetchPTTHot(): Promise<string[]> {
+  const items = await fetchPTTAtom()
+  return items.map(i => i.title)
+}
+
+// ── Dcard 熱門文章 ────────────────────────────────────────────────────────────
 
 interface DcardPost {
   id: number
@@ -29,136 +91,59 @@ interface DcardPost {
   forumAlias?: string
 }
 
-// ── PTT 八卦板 ────────────────────────────────────────────────────────────────
-
-const PTT_HEADERS = {
-  Cookie: 'over18=1',
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-}
-
-function parsePTTDate(dateStr: string): string {
-  // "5/14" → today's year, Taiwan time
-  const now = new Date()
-  const [m, d] = dateStr.trim().split('/').map(Number)
-  if (!m || !d) return now.toISOString()
-  const year = now.getMonth() + 1 < m ? now.getFullYear() - 1 : now.getFullYear()
-  // Use noon Taiwan time (UTC+8) → 04:00 UTC
-  return new Date(Date.UTC(year, m - 1, d, 4, 0, 0)).toISOString()
-}
-
-const PTT_SCORE = (nrec: string) => {
-  if (nrec === '爆') return 100
-  const n = parseInt(nrec)
-  return isNaN(n) ? 0 : Math.max(0, n)
-}
-
-async function fetchPTTRaw(): Promise<PTTArticle[]> {
-  const r1 = await fetch('https://www.ptt.cc/bbs/Gossiping/index.json', {
-    headers: PTT_HEADERS,
-    signal: AbortSignal.timeout(7000),
-  })
-  if (!r1.ok) {
-    console.warn('[PTT] fetch failed:', r1.status, r1.statusText)
-    return []
-  }
-
-  const d1 = await r1.json()
-  let articles: PTTArticle[] = d1.articles ?? []
-
-  const prevPath = d1.previous_page as string | undefined
-  if (prevPath) {
-    const prevJson = prevPath.replace('.html', '.json')
-    const r2 = await fetch(`https://www.ptt.cc${prevJson}`, {
-      headers: PTT_HEADERS,
-      signal: AbortSignal.timeout(5000),
-    }).catch(() => null)
-    if (r2?.ok) {
-      const d2 = await r2.json()
-      articles = [...articles, ...(d2.articles ?? [])]
-    }
-  }
-
-  return articles.filter(
-    a => a.title && !a.title.includes('本文已被刪除') && !a.title.includes('(已被刪除)')
-  )
-}
-
-async function fetchPTTHot(): Promise<string[]> {
-  try {
-    const articles = await fetchPTTRaw()
-    return articles
-      .sort((a, b) => PTT_SCORE(b.nrec) - PTT_SCORE(a.nrec))
-      .slice(0, 15)
-      .map(a => a.title)
-  } catch {
-    return []
-  }
-}
-
-export async function fetchPTTAsNewsItems(): Promise<NewsItem[]> {
-  try {
-    const articles = await fetchPTTRaw()
-    return articles
-      .sort((a, b) => PTT_SCORE(b.nrec) - PTT_SCORE(a.nrec))
-      .slice(0, 20)
-      .map(a => ({
-        id: hashString('ptt:' + a.href),
-        title: a.title,
-        url: `https://www.ptt.cc${a.href}`,
-        source: 'PTT 八卦板',
-        publishedAt: parsePTTDate(a.date),
-        column: 'tw' as const,
-        category: undefined,
-      }))
-  } catch {
-    return []
-  }
-}
-
-// ── Dcard 熱門文章 ────────────────────────────────────────────────────────────
-
 const DCARD_HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
   Referer: 'https://www.dcard.tw/',
-  Accept: 'application/json',
+  Origin: 'https://www.dcard.tw',
+  Accept: 'application/json, text/plain, */*',
+  'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
 }
 
 async function fetchDcardRaw(): Promise<DcardPost[]> {
-  const r = await fetch(
-    'https://www.dcard.tw/service/api/v2/posts?popular=true&limit=30',
-    { headers: DCARD_HEADERS, signal: AbortSignal.timeout(7000) }
-  )
-  if (!r.ok) return []
-  return (await r.json()) as DcardPost[]
-}
-
-async function fetchDcardHot(): Promise<string[]> {
+  const url = 'https://www.dcard.tw/service/api/v2/posts?popular=true&limit=30'
+  let r: Response
   try {
-    const posts = await fetchDcardRaw()
-    return posts.filter(p => p.title).slice(0, 20).map(p => p.title)
-  } catch {
+    r = await fetch(url, { headers: DCARD_HEADERS, signal: AbortSignal.timeout(8000) })
+  } catch (err) {
+    console.warn('[Dcard] network error:', err)
+    return []
+  }
+  if (!r.ok) {
+    console.warn('[Dcard] HTTP error:', r.status, r.statusText)
+    return []
+  }
+  try {
+    const data = await r.json()
+    if (!Array.isArray(data)) {
+      console.warn('[Dcard] unexpected response shape:', typeof data)
+      return []
+    }
+    return data as DcardPost[]
+  } catch (err) {
+    console.warn('[Dcard] JSON parse error:', err)
     return []
   }
 }
 
 export async function fetchDcardAsNewsItems(): Promise<NewsItem[]> {
-  try {
-    const posts = await fetchDcardRaw()
-    return posts
-      .filter(p => p.title && p.id)
-      .slice(0, 20)
-      .map(p => ({
-        id: hashString('dcard:' + p.id),
-        title: p.title,
-        url: `https://www.dcard.tw/p/${p.id}`,
-        source: 'Dcard',
-        publishedAt: p.createdAt ?? new Date().toISOString(),
-        column: 'tw' as const,
-        category: undefined,
-      }))
-  } catch {
-    return []
-  }
+  const posts = await fetchDcardRaw()
+  return posts
+    .filter(p => p.title && p.id)
+    .slice(0, 20)
+    .map(p => ({
+      id: hashString('dcard:' + p.id),
+      title: p.title,
+      url: `https://www.dcard.tw/p/${p.id}`,
+      source: 'Dcard',
+      publishedAt: p.createdAt ?? new Date().toISOString(),
+      column: 'tw' as const,
+      category: undefined,
+    }))
+}
+
+async function fetchDcardHot(): Promise<string[]> {
+  const posts = await fetchDcardRaw()
+  return posts.filter(p => p.title).slice(0, 20).map(p => p.title)
 }
 
 // ── Google Trends 台灣 ────────────────────────────────────────────────────────
@@ -200,12 +185,12 @@ export async function fetchSocialSignals(): Promise<SocialSignals> {
   ])
 
   const signals: SocialSignals = {
-    pttHot:       ptt.status       === 'fulfilled' ? ptt.value       : [],
-    dcardHot:     dcard.status     === 'fulfilled' ? dcard.value     : [],
-    googleTrends: gtrends.status   === 'fulfilled' ? gtrends.value   : [],
+    pttHot:       ptt.status     === 'fulfilled' ? ptt.value     : [],
+    dcardHot:     dcard.status   === 'fulfilled' ? dcard.value   : [],
+    googleTrends: gtrends.status === 'fulfilled' ? gtrends.value : [],
   }
 
-  if (signals.pttHot.length > 0 || signals.googleTrends.length > 0) {
+  if (signals.pttHot.length > 0 || signals.dcardHot.length > 0 || signals.googleTrends.length > 0) {
     await cacheSet(SOCIAL_CACHE_KEY, signals, SOCIAL_TTL)
   }
 

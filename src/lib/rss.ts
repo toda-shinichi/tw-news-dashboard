@@ -40,23 +40,52 @@ const RSS_SOURCES: RSSSource[] = [
   { name: '自由時報社會', url: 'https://news.ltn.com.tw/rss/society.xml',             column: 'tw', defaultCategory: 'society' },
   { name: '聯合社會',    url: 'https://udn.com/rssfeed/news/2/6639?ch=news',          column: 'tw', defaultCategory: 'society' },
 
-  // ── 台灣直連：民生 ──────────────────────────────────
+  // ── 台灣直連：民生／財經 ─────────────────────────────
   { name: '自由時報財經', url: 'https://news.ltn.com.tw/rss/business.xml',            column: 'tw', defaultCategory: 'life' },
   { name: '聯合財經',    url: 'https://udn.com/rssfeed/news/2/6644?ch=news',          column: 'tw', defaultCategory: 'life' },
+  { name: '中央社財經',  url: 'https://feeds.feedburner.com/rsscna/finance',           column: 'tw', defaultCategory: 'life' },
+  { name: '經濟日報',    url: 'https://money.udn.com/rssfeed/news/1001/5588',          column: 'tw', defaultCategory: 'life' },
 
-  // ── 台灣 Google News 補充（各類補充來源多樣性）──────────
+  // ── 台灣直連：科技 ──────────────────────────────────
+  { name: 'iThome',     url: 'https://www.ithome.com.tw/rss',                        column: 'tw', defaultCategory: 'life' },
+  { name: 'TechNews',   url: 'https://technews.tw/tn-rss/',                           column: 'tw', defaultCategory: 'life' },
+  { name: 'Inside',     url: 'https://www.inside.com.tw/feed/rss',                   column: 'tw', defaultCategory: 'life' },
+  { name: '聯合數位',    url: 'https://udn.com/rssfeed/news/2/7226?ch=news',          column: 'tw', defaultCategory: 'life' },
+  { name: '中央社科技',  url: 'https://feeds.feedburner.com/rsscna/technology',        column: 'tw', defaultCategory: 'life' },
+
+  // ── 台灣直連：社會（補充）────────────────────────────
+  { name: '中央社生活',  url: 'https://feeds.feedburner.com/rsscna/lifehealth',        column: 'tw', defaultCategory: 'society' },
+  { name: '中央社地方',  url: 'https://feeds.feedburner.com/rsscna/local',             column: 'tw', defaultCategory: 'society' },
+  { name: 'ETtoday 社會', url: 'https://feeds.feedburner.com/ettoday/society',        column: 'tw', defaultCategory: 'society' },
+
+  // ── 台灣直連：娛樂 ──────────────────────────────────
+  { name: 'ETtoday 星光', url: 'https://feeds.feedburner.com/ettoday/star',           column: 'tw', defaultCategory: 'life' },
+
+  // ── 台灣 Google News 補充 ────────────────────────────
   gnq('台灣外交 兩岸政策 國防 軍售', 'tw', '政治補充', 'politics'),
   gnq('台灣社會案件 意外 災害 食安', 'tw', '社會補充', 'society'),
   gnq('台灣 命案 刑案 逮捕 起訴 嫌犯', 'tw', '刑案補充', 'society'),
   gnq('台灣 車禍 火災 爆炸 搜救 失蹤', 'tw', '事故補充', 'society'),
   gnq('台積電 台股 科技 AI 房市', 'tw', '民生補充', 'life'),
 
+  // ── 國際直連：中文 ────────────────────────────────────
+  { name: '聯合全球',    url: 'https://udn.com/rssfeed/news/2/7225?ch=news',          column: 'intl', defaultCategory: 'politics' },
+  { name: '中央社國際',  url: 'https://feeds.feedburner.com/rsscna/intworld',          column: 'intl', defaultCategory: 'politics' },
+
+  // ── 國際直連：英文 ────────────────────────────────────
+  { name: 'BBC World',   url: 'http://feeds.bbci.co.uk/news/world/rss.xml',           column: 'intl' },
+  { name: 'CNN Top',     url: 'http://rss.cnn.com/rss/edition.rss',                   column: 'intl' },
+  { name: 'NY Times',    url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml', column: 'intl' },
+  { name: 'The Guardian', url: 'https://www.theguardian.com/world/rss',               column: 'intl' },
+  { name: 'MarketWatch', url: 'https://feeds.content.dowjones.io/public/rss/mw_topstories', column: 'intl', defaultCategory: 'life' },
+  { name: 'Bloomberg',   url: 'https://feeds.bloomberg.com/technology/news.rss',      column: 'intl', defaultCategory: 'life' },
+
   // ── 國際 Google News ──────────────────────────────────
   gnq('Taiwan politics diplomacy security', 'intl', 'Taiwan', undefined, 'en-US', 'US', 'US:en'),
   gnq('Taiwan China military strait conflict', 'intl', '台海安全', undefined, 'en-US', 'US', 'US:en'),
   gnq('US China trade tariff sanctions economy', 'intl', '美中貿易', undefined, 'en-US', 'US', 'US:en'),
   gnq('Ukraine Russia war Middle East crisis', 'intl', '國際衝突', undefined, 'en-US', 'US', 'US:en'),
-  // 中文國際新聞
+  // 中文國際
   gnq('兩岸關係 台海局勢 中共 解放軍', 'intl', '兩岸'),
   gnq('川普 習近平 美中關係 貿易戰 關稅', 'intl', '川習美中', 'politics'),
   gnq('俄烏戰爭 以巴衝突 中東局勢 國際局勢', 'intl', '國際衝突中文', 'politics'),
