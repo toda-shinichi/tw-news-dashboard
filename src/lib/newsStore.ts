@@ -5,12 +5,7 @@ import { fetchGDELT, fetchGDELTTaiwan } from './gdelt'
 import { fetchMediastack } from './mediastack'
 import { fetchGNews } from './gnews'
 import { filterByDateRange, classifyCategory, isChineseText } from './utils'
-import { dedupeLifeNewsAI } from './ai'
 import { NewsItem, NewsColumn, TabRange } from '@/types'
-
-const LIFE_CATS = new Set(['life', 'entertainment', 'finance', 'tech'])
-const LIFE_DEDUP_CACHE_KEY = 'life:dedup:excluded'
-const LIFE_DEDUP_TTL = 3600 // 60 min
 
 const FETCH_INTERVAL_MS = 15 * 60 * 1000   // 15 min: RSS + GDELT
 const EXT_INTERVAL_MS   = 24 * 60 * 60 * 1000 // 24 hr: Mediastack + GNews (quota 保護)
@@ -112,30 +107,7 @@ export async function getAccumulatedNews(
           ...item,
           category: item.category ?? classifyCategory(item.title, col),
         }))
-        let merged = mergeStore(categorized, items)
-
-        // AI dedup for 民生 (tw column only): remove duplicate same-event articles
-        if (col === 'tw') {
-          const lifeItems = merged.filter(item => LIFE_CATS.has(item.category ?? ''))
-          const cachedExcluded = await cacheGet<string[]>(LIFE_DEDUP_CACHE_KEY)
-          let excluded: Set<string>
-          if (cachedExcluded) {
-            excluded = new Set(cachedExcluded)
-            // also dedup any newly fetched life articles not yet in cache
-            const newLife = lifeItems.filter(item => !cachedExcluded.includes(item.id))
-            if (newLife.length > 0) {
-              const newExcluded = await dedupeLifeNewsAI(newLife)
-              for (const id of newExcluded) excluded.add(id)
-              await cacheSet(LIFE_DEDUP_CACHE_KEY, [...excluded], LIFE_DEDUP_TTL)
-            }
-          } else {
-            excluded = await dedupeLifeNewsAI(lifeItems)
-            await cacheSet(LIFE_DEDUP_CACHE_KEY, [...excluded], LIFE_DEDUP_TTL)
-          }
-          merged = merged.filter(item => !LIFE_CATS.has(item.category ?? '') || !excluded.has(item.id))
-        }
-
-        items = merged
+        items = mergeStore(categorized, items)
         await Promise.all([
           cacheSet(accKey, items, TTL),
           cacheSet(tsKey, Date.now(), TTL),
