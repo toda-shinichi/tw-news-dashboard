@@ -294,9 +294,6 @@ export default function SummaryBanner({ data, loading }: SummaryBannerProps) {
           {/* 當前話題人物（可點擊） */}
           {(data.people?.length ?? 0) > 0 && <PeopleRow people={data.people} />}
 
-          {/* 方向預估（全寬） */}
-          <DirectionSection items={data.direction ?? []} />
-
           {/* 各分類議題（2×2 格線） */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <CategorySection catKey="politics" items={data.politics_issues ?? []} />
@@ -304,6 +301,9 @@ export default function SummaryBanner({ data, loading }: SummaryBannerProps) {
             <CategorySection catKey="intl"     items={data.intl_issues     ?? []} />
             <CategorySection catKey="life"     items={data.life_issues     ?? []} />
           </div>
+
+          {/* 方向預估（全寬） */}
+          <DirectionSection items={data.direction ?? []} />
 
           {/* AI 預測社群潛力 */}
           <ViralSection items={data.viral ?? []} />
