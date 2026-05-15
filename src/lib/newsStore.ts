@@ -5,7 +5,12 @@ import { fetchGDELT, fetchGDELTTaiwan } from './gdelt'
 import { fetchMediastack } from './mediastack'
 import { fetchGNews } from './gnews'
 import { filterByDateRange, classifyCategory, isChineseText } from './utils'
+import { dedupeLifeNewsAI } from './ai'
 import { NewsItem, NewsColumn, TabRange } from '@/types'
+
+const LIFE_CATS = new Set(['life', 'entertainment', 'finance', 'tech'])
+const LIFE_DEDUP_KEY = 'life:dedup:excluded'
+const LIFE_DEDUP_TTL = 3600
 
 const FETCH_INTERVAL_MS = 15 * 60 * 1000   // 15 min: RSS + GDELT
 const EXT_INTERVAL_MS   = 24 * 60 * 60 * 1000 // 24 hr: Mediastack + GNews (quota 保護)
@@ -48,8 +53,8 @@ async function fetchExternalTW(isBackfill: boolean): Promise<NewsItem[]> {
 async function fetchFresh(col: NewsColumn, isBackfill: boolean): Promise<NewsItem[]> {
   // Backfill: cast a wide net to fill the past 24h from cold start.
   // Regular: 1d span is enough — mergeStore accumulates across cycles.
-  const gdeltSpan     = isBackfill ? '7d'  : '1d'
-  const gdeltRecords  = isBackfill ? 250   : 50
+  const gdeltSpan     = isBackfill ? '3d'  : '1d'
+  const gdeltRecords  = isBackfill ? 100   : 50
   // NewsAPI: on backfill fetch past 24h explicitly; otherwise just latest batch
   const newsAPIFrom   = isBackfill
     ? new Date(Date.now() - 26 * 3600_000).toISOString().slice(0, 19) + 'Z'
@@ -107,7 +112,29 @@ export async function getAccumulatedNews(
           ...item,
           category: item.category ?? classifyCategory(item.title, col),
         }))
-        items = mergeStore(categorized, items)
+        let merged = mergeStore(categorized, items)
+
+        // AI dedup for 民生 (tw only): exclude same-event duplicates
+        if (col === 'tw') {
+          const lifeItems = merged.filter(item => LIFE_CATS.has(item.category ?? ''))
+          const cached = await cacheGet<string[]>(LIFE_DEDUP_KEY)
+          let excluded: Set<string>
+          if (cached) {
+            excluded = new Set(cached)
+            const newLife = lifeItems.filter(item => !excluded.has(item.id))
+            if (newLife.length > 0) {
+              const newExcluded = await dedupeLifeNewsAI(newLife)
+              for (const id of newExcluded) excluded.add(id)
+              await cacheSet(LIFE_DEDUP_KEY, [...excluded], LIFE_DEDUP_TTL)
+            }
+          } else {
+            excluded = await dedupeLifeNewsAI(lifeItems)
+            await cacheSet(LIFE_DEDUP_KEY, [...excluded], LIFE_DEDUP_TTL)
+          }
+          merged = merged.filter(item => !LIFE_CATS.has(item.category ?? '') || !excluded.has(item.id))
+        }
+
+        items = merged
         await Promise.all([
           cacheSet(accKey, items, TTL),
           cacheSet(tsKey, Date.now(), TTL),

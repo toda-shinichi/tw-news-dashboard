@@ -37,11 +37,11 @@ const RSS_SOURCES: RSSSource[] = [
   { name: '公視新聞',   url: 'https://about.pts.org.tw/rss/XML/newsfeed.xml',            column: 'tw' },
   { name: '公視電子報', url: 'https://about.pts.org.tw/rss/XML/newsletter.xml',          column: 'tw' },
   // Google News 台灣話題（zh-TW）
-  { name: 'GN 台灣話題1', url: 'https://news.google.com/rss/topics/CAAqJQgKIh9DQkFTRVFvSUwyMHZNRFptTXpJU0JYcG9MVlJYS0FBUAE?hl=zh-TW&gl=TW&ceid=TW%3Azh-Hant', column: 'tw' },
-  { name: 'GN 台灣話題2', url: 'https://news.google.com/rss/topics/CAAqKggKIiRDQkFTRlFvSUwyMHZNRGx1YlY4U0JYcG9MVlJYR2dKVVZ5Z0FQAQ?hl=zh-TW&gl=TW&ceid=TW%3Azh-Hant', column: 'tw' },
-  { name: 'GN 台灣話題3', url: 'https://news.google.com/rss/topics/CAAqKggKIiRDQkFTRlFvSUwyMHZNRGx6TVdZU0JYcG9MVlJYR2dKVVZ5Z0FQAQ?hl=zh-TW&gl=TW&ceid=TW%3Azh-Hant', column: 'tw' },
-  { name: 'GN 台灣話題4', url: 'https://news.google.com/rss/topics/CAAqLAgKIiZDQkFTRmdvSkwyMHZNR1ptZHpWbUVnVjZhQzFVVnhvQ1ZGY29BQVAB?hl=zh-TW&gl=TW&ceid=TW%3Azh-Hant', column: 'tw' },
-  { name: 'GN 台灣話題5', url: 'https://news.google.com/rss/topics/CAAqKggKIiRDQkFTRlFvSUwyMHZNREpxYW5RU0JYcG9MVlJYR2dKVVZ5Z0FQAQ?hl=zh-TW&gl=TW&ceid=TW%3Azh-Hant', column: 'tw' },
+  gnq('台灣 今日新聞 最新消息', 'tw', 'TW今日'),
+  gnq('台灣政治 立法院 行政院 總統府', 'tw', 'TW政治綜合'),
+  gnq('台灣社會 民生 生活 天氣', 'tw', 'TW社生'),
+  gnq('台灣財經 台股 投資 房市', 'tw', 'TW財經'),
+  gnq('台灣科技 半導體 台積電 AI', 'tw', 'TW科技'),
 
   // ══ 台灣：政治 ══════════════════════════════════════
   { name: '自由時報政治', url: 'https://news.ltn.com.tw/rss/politics.xml',              column: 'tw', defaultCategory: 'politics' },

@@ -6,7 +6,6 @@ import { NewsItem } from '@/types'
 import NewsCard from './NewsCard'
 import LoadingState from './LoadingState'
 
-const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000
 const PAGE_SIZE = 30
 
 interface NewsColumnProps {
@@ -45,8 +44,7 @@ export default function NewsColumn({
   const topRef = useRef<HTMLDivElement>(null)
 
   const filteredItems = useMemo(() => {
-    const cutoff12h = Date.now() - TWELVE_HOURS_MS
-    let result = items.filter(item => new Date(item.publishedAt).getTime() >= cutoff12h)
+    let result = [...items]
 
     if (selectedCat === 'intl') {
       result = result.filter(item => item.column === 'intl')

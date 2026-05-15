@@ -155,7 +155,7 @@ export async function generateSummary(items: NewsItem[], social?: SocialSignals,
             '請綜合以下【數據摘要】、【過去12小時新聞標題】（含部分英文國際新聞，請理解後以繁體中文分析）與【社群訊號】，全程用繁體中文輸出 JSON，不要其他文字。',
             '',
             '格式：',
-            '{"overview":"整體輿情深度摘要，必須150至300字，涵蓋：當期主要事件脈絡、各議題之間的關聯性、整體輿論情緒走向（樂觀/悲觀/焦慮/對立等），以及對台灣社會的潛在影響；文字通順、具分析深度，不可流水帳羅列","topics":["五大當前議題，每項格式為『議題名稱：具體說明內容』，說明部分需點出核心爭點、涉及對象或影響範圍（整項40字以內）"],"dynamics":["4至6項動向預測，整合正在醞釀中的發展與即將可能升溫的話題，說明趨勢方向與觸發條件（每項35字以內）"],"watchlist":["3至5項觀察清單，整合需長期追蹤的重要議題與今日特別警示，需具體說明風險或觀察重點（每項35字以內）"],"people":["當前最受關注的4至6位人物姓名"],"viral":["根據PTT/Dcard熱門文章與Google Trends熱搜，綜合評估5至10個最可能在台灣社群引爆討論的話題，優先納入社群訊號中已熱議者，說明討論族群與潛在爭議方向（每項35字以內）"]}',
+            '{"overview":"整體輿情深度摘要，必須150至300字，涵蓋：當期主要事件脈絡、各議題之間的關聯性、整體輿論情緒走向（樂觀/悲觀/焦慮/對立等），以及對台灣社會的潛在影響；文字通順、具分析深度，不可流水帳羅列","topics":["五大當前議題，每項格式為『議題名稱：具體說明內容』，說明部分需點出核心爭點、涉及對象或影響範圍（整項40字以內）"],"dynamics":["4至6項動向預測，整合正在醞釀中的發展與即將可能升溫的話題，說明趨勢方向與觸發條件（每項35字以內）"],"watchlist":["3至5項觀察清單，整合需長期追蹤的重要議題與今日特別警示，需具體說明風險或觀察重點（每項35字以內）"],"people":["當前最受關注的4至6位人物姓名"],"viral":["嚴格根據上方【過去12小時新聞標題】中實際出現的事件，評估3至5個最可能在台灣社群引爆討論的話題；若有【社群訊號】則優先參考。絕對不得自行創造或假設任何標題中未出現的事件、人物或情境。每項格式：話題名稱：說明（35字以內）"]}',
             '',
             ...(stats ? ['【數據摘要】', buildStatsBlock(stats), ''] : []),
             '【過去12小時新聞標題（最新80則）】',
@@ -292,4 +292,50 @@ export async function extractHotList(
     console.error('[extractHotList] error:', err)
     return { topics: [], keywords: [], people: [] }
   }
+}
+
+// Returns IDs of duplicate life-category articles (same event, different source) to exclude.
+// Batches input ≤80 items to stay within token limits.
+export async function dedupeLifeNewsAI(items: NewsItem[]): Promise<Set<string>> {
+  if (!process.env.CPA_API_KEY || items.length === 0) return new Set()
+
+  const client = getClient()
+  const excluded = new Set<string>()
+  const BATCH = 80
+
+  for (let i = 0; i < items.length; i += BATCH) {
+    const batch = items.slice(i, i + BATCH)
+    const numbered = batch.map((item, idx) => `${idx + 1}. [${item.id}] ${item.title}`).join('\n')
+
+    try {
+      const resp = await client.chat.completions.create({
+        model: MODEL_FAST,
+        messages: [
+          {
+            role: 'user',
+            content:
+              '以下是民生新聞清單（格式：序號. [id] 標題）。找出報導同一事件的重複新聞，每組只保留最重要的一則，其餘列為排除。只輸出要排除的 id JSON 陣列，不要其他文字。無重複則輸出 []。\n\n' +
+              numbered + '\n\n輸出：',
+          },
+        ],
+        temperature: 0,
+        max_tokens: 500,
+      })
+
+      const text = resp.choices[0]?.message?.content?.trim() || '[]'
+      const jsonMatch = text.match(/\[[\s\S]*?\]/)
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0])
+        if (Array.isArray(parsed)) {
+          for (const id of parsed) {
+            if (typeof id === 'string') excluded.add(id)
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[dedupeLifeNewsAI] batch error:', err)
+    }
+  }
+
+  return excluded
 }

@@ -44,7 +44,7 @@ async function gdeltFetch(query: string, timespan: string, column: 'tw' | 'intl'
   url.searchParams.set('sort', 'hybridrel')
 
   try {
-    const resp = await fetch(url.toString(), { signal: AbortSignal.timeout(15000) })
+    const resp = await fetch(url.toString(), { signal: AbortSignal.timeout(8000) })
     if (!resp.ok) return []
     const data = await resp.json()
     return (data.articles || [])
