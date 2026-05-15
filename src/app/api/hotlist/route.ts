@@ -52,10 +52,7 @@ export async function GET(req: NextRequest) {
   } else if (cat === 'society' || cat === 'life') {
     feedForAI = filterByCat(twDeduped, cat)
   } else if (cat === 'politics') {
-    feedForAI = [
-      ...filterByCat(twDeduped, 'politics'),
-      ...filterByCat(intlDeduped, 'politics'),
-    ]
+    feedForAI = filterByCat(twDeduped, 'politics')
   } else {
     feedForAI = twDeduped
   }

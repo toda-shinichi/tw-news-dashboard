@@ -2,10 +2,11 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react'
 import clsx from 'clsx'
-import { NewsItem, NewsCategory } from '@/types'
+import { NewsItem } from '@/types'
 import NewsCard from './NewsCard'
 import LoadingState from './LoadingState'
 
+const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000
 const PAGE_SIZE = 30
 
 interface NewsColumnProps {
@@ -18,14 +19,14 @@ interface NewsColumnProps {
   selectedKeyword?: string | null
 }
 
-type FilterValue = NewsCategory | 'intl'
+type FilterValue = 'all' | 'politics' | 'society' | 'intl' | 'life'
 
 const CATEGORY_TABS: { value: FilterValue; label: string }[] = [
   { value: 'all',      label: '全部' },
   { value: 'politics', label: '政治' },
   { value: 'society',  label: '社會' },
-  { value: 'life',     label: '民生' },
   { value: 'intl',     label: '國際' },
+  { value: 'life',     label: '民生' },
 ]
 
 const LIFE_CATS = new Set(['life', 'entertainment', 'finance', 'tech'])
@@ -44,15 +45,20 @@ export default function NewsColumn({
   const topRef = useRef<HTMLDivElement>(null)
 
   const filteredItems = useMemo(() => {
-    let result = items
+    const cutoff12h = Date.now() - TWELVE_HOURS_MS
+    let result = items.filter(item => new Date(item.publishedAt).getTime() >= cutoff12h)
+
     if (selectedCat === 'intl') {
       result = result.filter(item => item.column === 'intl')
+    } else if (selectedCat === 'politics') {
+      // 政治：僅 tw，不含國際欄
+      result = result.filter(item => item.category === 'politics' && item.column === 'tw')
     } else if (selectedCat === 'society') {
+      // 社會：tw 且非政治
       result = result.filter(item => item.category === 'society' && item.column === 'tw')
     } else if (selectedCat === 'life') {
+      // 民生：tw 且非政治、非社會
       result = result.filter(item => LIFE_CATS.has(item.category ?? '') && item.column === 'tw')
-    } else if (selectedCat === 'politics') {
-      result = result.filter(item => item.category === 'politics')
     }
     if (selectedKeyword) {
       result = result.filter(
@@ -64,7 +70,6 @@ export default function NewsColumn({
     return result
   }, [items, selectedCat, selectedKeyword])
 
-  // Reset to page 1 when filters change
   useEffect(() => { setPage(1) }, [selectedCat, selectedKeyword])
 
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE))
@@ -138,18 +143,16 @@ export default function NewsColumn({
         </div>
       )}
 
-      {!error && !building && displayItems.length === 0 && !loading && (
+      {!error && !building && filteredItems.length === 0 && !loading && (
         <div className="text-sm text-[#888888] text-center py-12">
           {items.length > 0 ? '此分類無符合條件的新聞' : '此時段無新聞資料'}
         </div>
       )}
 
-      {/* Show articles even while refreshing (stale-while-reloading) */}
       {!error && displayItems.map(item => (
         <NewsCard key={item.id} item={item} />
       ))}
 
-      {/* Pagination */}
       {!error && filteredItems.length > PAGE_SIZE && (
         <div className="flex items-center justify-between pt-1">
           <button

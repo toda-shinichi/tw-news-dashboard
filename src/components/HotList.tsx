@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
-import { NewsCategory, TabRange } from '@/types'
+import { TabRange } from '@/types'
 
 interface HotData {
   topics: string[]
@@ -16,14 +16,14 @@ interface HotListProps {
   tab: TabRange
 }
 
-type HotFilter = NewsCategory | 'intl'
+type HotFilter = 'all' | 'politics' | 'society' | 'intl' | 'life'
 
 const CATEGORY_TABS: { value: HotFilter; label: string }[] = [
   { value: 'all',      label: '全部' },
   { value: 'politics', label: '政治' },
   { value: 'society',  label: '社會' },
-  { value: 'life',     label: '民生' },
   { value: 'intl',     label: '國際' },
+  { value: 'life',     label: '民生' },
 ]
 
 function RankedList({ items, loading }: { items: string[]; loading?: boolean }) {

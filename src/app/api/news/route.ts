@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { analyzeSentiment } from '@/lib/ai'
 import { cacheGet, cacheSet } from '@/lib/cache'
-import { dedupeByTitle } from '@/lib/utils'
+import { dedupeByTitle, isChineseText } from '@/lib/utils'
 import { getAccumulatedNews } from '@/lib/newsStore'
 import { TabRange, NewsColumn, NewsResponse } from '@/types'
 
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   const q      = sp.get('q')?.trim() || ''
   const cat    = sp.get('cat')   || ''
   const page   = Math.max(1, parseInt(sp.get('page')  || '1'))
-  const limit  = Math.min(200, Math.max(1, parseInt(sp.get('limit') || '150')))
+  const limit  = sp.has('limit') ? Math.min(2000, Math.max(1, parseInt(sp.get('limit')!))) : 2000
 
   const isPaginated = sp.has('page') || sp.has('limit') || q || cat
 
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   const rawItems = await getAccumulatedNews(column, tab, force)
 
-  let items = dedupeByTitle(rawItems)
+  let items = dedupeByTitle(rawItems).filter(item => isChineseText(item.title))
   items.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
 
   // Apply keyword search

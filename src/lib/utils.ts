@@ -1,5 +1,11 @@
 import { TabRange, NewsCategory } from '@/types'
 
+export function isChineseText(text: string): boolean {
+  const cjk = (text.match(/[一-鿿]/g) ?? []).length
+  const nonSpace = text.replace(/\s/g, '').length
+  return nonSpace > 0 && cjk / nonSpace >= 0.15
+}
+
 export function hashString(str: string): string {
   let hash = 0
   for (let i = 0; i < str.length; i++) {
@@ -239,6 +245,9 @@ const HOT_STOPWORDS = new Set([
   '台灣', '記者', '報導', '指出', '表示', '說明', '今天', '今日', '宣布',
   '發表', '公布', '提出', '日前', '相關', '部分', '進行', '已經', '目前',
   '最新', '消息', '新聞', '媒體', '分析', '顯示', '根據', '認為', '強調',
+  // 新聞格式標籤
+  '快訊', '獨家', '直播', '直擊', '現場', '重磅', '重要', '緊急', '突發',
+  '影音', '影片', '圖輯', '焦點', '專題', '特報', '特稿',
   // 新聞套語動詞 / 形容詞
   '曝光', '傳出', '爆料', '回應', '回應說', '對此', '外界', '透露', '坦言',
   '批評', '呼籲', '警告', '否認', '確認', '聲稱', '澄清', '不滿', '質疑',
@@ -271,15 +280,29 @@ export function computeKeywordCounts(
     }
   }
 
-  // Lower threshold than computeHotKeywords to surface more terms
-  const minCount = Math.max(2, Math.ceil(titles.length * 0.02))
+  // 1% of titles, minimum 2 — low enough to surface 10 keywords even in narrow 12h windows
+  const minCount = Math.max(2, Math.ceil(titles.length * 0.01))
 
-  // Longer terms get a frequency bonus so 3-char compounds beat their 2-char sub-grams
+  // Qualify: must meet minCount threshold
+  const qualified = new Map([...freq.entries()].filter(([, c]) => c >= minCount))
+
+  // Drop any shorter n-gram that is a substring of a longer qualified n-gram —
+  // this prevents fragments like 「川習」 from appearing when 「川習會」 qualifies
+  const qualKeys = [...qualified.keys()]
+  const dominated = new Set<string>()
+  for (const word of qualKeys) {
+    for (const other of qualKeys) {
+      if (other.length > word.length && other.includes(word)) {
+        dominated.add(word)
+        break
+      }
+    }
+  }
+
   const lenBonus = (w: string) => w.length >= 4 ? 2.0 : w.length >= 3 ? 1.5 : 1.0
-
-  const sorted = [...freq.entries()]
-    .filter(([, c]) => c >= minCount)
-    .sort(([wa, a], [wb, b]) => b * lenBonus(wb) - a * lenBonus(wa))
+  const sorted = [...qualified.entries()]
+    .filter(([w]) => !dominated.has(w))
+    .sort(([, a], [, b]) => b - a) // sort by raw count; longer already won via dominated filter
 
   const result: Array<{ word: string; count: number }> = []
   for (const [word, count] of sorted) {
@@ -315,12 +338,22 @@ export function computeHotKeywords(
   }
 
   const minCount = Math.max(2, Math.ceil(titles.length * 0.1))
+  const qualified = new Map([...freq.entries()].filter(([, c]) => c >= minCount))
 
-  const lenBonus = (w: string) => w.length >= 4 ? 2.0 : w.length >= 3 ? 1.5 : 1.0
+  const qualKeys = [...qualified.keys()]
+  const dominated = new Set<string>()
+  for (const word of qualKeys) {
+    for (const other of qualKeys) {
+      if (other.length > word.length && other.includes(word)) {
+        dominated.add(word)
+        break
+      }
+    }
+  }
 
-  const sorted = [...freq.entries()]
-    .filter(([, c]) => c >= minCount)
-    .sort(([wa, a], [wb, b]) => b * lenBonus(wb) - a * lenBonus(wa))
+  const sorted = [...qualified.entries()]
+    .filter(([w]) => !dominated.has(w))
+    .sort(([, a], [, b]) => b - a)
 
   const result: string[] = []
   for (const [word] of sorted) {

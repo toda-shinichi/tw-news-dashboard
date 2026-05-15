@@ -23,8 +23,14 @@ export async function GET(req: NextRequest) {
   ])
   const allItems = [...twItems, ...intlItems]
 
-  // Real frequency count across all titles — no AI guessing
-  const keywords = computeKeywordCounts(allItems.map(i => i.title), 30)
+  // Filter to past 12h for more timely keyword extraction
+  const cutoff12h = Date.now() - 12 * 3600_000
+  const recent = allItems.filter(i => new Date(i.publishedAt).getTime() >= cutoff12h)
+  const feedItems = recent.length >= 20 ? recent : allItems
+
+  // Top 10 keywords from Chinese titles only
+  const chineseItems = feedItems.filter(i => /[一-鿿]/.test(i.title))
+  const keywords = computeKeywordCounts(chineseItems.map(i => i.title), 10)
 
   const response: KeywordsResponse = { keywords, fromCache: false }
   await cacheSet(cacheKey, response, 900) // 15-min cache

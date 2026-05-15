@@ -4,7 +4,7 @@ import { fetchNewsAPI } from './newsapi'
 import { fetchGDELT, fetchGDELTTaiwan } from './gdelt'
 import { fetchMediastack } from './mediastack'
 import { fetchGNews } from './gnews'
-import { filterByDateRange, classifyCategory } from './utils'
+import { filterByDateRange, classifyCategory, isChineseText } from './utils'
 import { NewsItem, NewsColumn, TabRange } from '@/types'
 
 const FETCH_INTERVAL_MS = 15 * 60 * 1000   // 15 min: RSS + GDELT
@@ -98,11 +98,11 @@ export async function getAccumulatedNews(
     if (!isLocked) {
       await cacheSet(lockKey, true, 120) // 120-second lock TTL
       try {
-        const fresh = await fetchFresh(col, isBackfill)
-        // Respect defaultCategory from RSS sources — only fill in classifier
-        // when the source didn't provide an explicit category.
-        // Do NOT reclassify the merged store: that would override defaultCategory
-        // for explicitly-tagged feeds (自由時報社會, 中央社社會, etc.).
+        const rawFresh = await fetchFresh(col, isBackfill)
+        // Discard non-Chinese titles from every source (RSS included).
+        // Taiwan-column native feeds are always Chinese; intl-column foreign
+        // RSS (CNN, Guardian, etc.) often publish in English — drop those.
+        const fresh = rawFresh.filter(item => isChineseText(item.title))
         const categorized = fresh.map(item => ({
           ...item,
           category: item.category ?? classifyCategory(item.title, col),
@@ -121,5 +121,7 @@ export async function getAccumulatedNews(
     // If locked, another fetch is in flight — return stale data immediately
   }
 
-  return filterByDateRange(items, tab)
+  // Apply Chinese filter at read time so old cached data is also cleaned up
+  const chineseItems = items.filter(item => isChineseText(item.title))
+  return filterByDateRange(chineseItems, tab)
 }

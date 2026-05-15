@@ -1,5 +1,5 @@
 import { NewsItem } from '@/types'
-import { hashString } from './utils'
+import { hashString, isChineseText } from './utils'
 
 interface GDELTArticle {
   url: string
@@ -59,7 +59,7 @@ async function gdeltFetch(query: string, timespan: string, column: 'tw' | 'intl'
           column,
         } as NewsItem
       })
-      .filter((item: NewsItem | null): item is NewsItem => item !== null)
+      .filter((item: NewsItem | null): item is NewsItem => item !== null && isChineseText(item.title))
   } catch {
     return []
   }

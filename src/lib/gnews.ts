@@ -1,5 +1,5 @@
 import { NewsItem } from '@/types'
-import { hashString } from './utils'
+import { hashString, isChineseText } from './utils'
 
 interface GNewsArticle {
   title: string
@@ -41,7 +41,7 @@ export async function fetchGNews(daysBack = 1): Promise<NewsItem[]> {
           column: 'tw' as const,
         } as NewsItem
       })
-      .filter((item: NewsItem | null): item is NewsItem => item !== null)
+      .filter((item: NewsItem | null): item is NewsItem => item !== null && isChineseText(item.title))
   } catch {
     return []
   }

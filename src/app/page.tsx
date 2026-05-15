@@ -172,7 +172,7 @@ export default function HomePage() {
         {/* 議題標籤 */}
         <section>
           <h2 className="text-xs font-medium text-[#888888] uppercase tracking-widest mb-3">
-            本期議題焦點
+            議題焦點
           </h2>
           <KeywordCloud
             keywords={state.keywords}
@@ -193,7 +193,7 @@ export default function HomePage() {
         {/* 單欄新聞（台灣 + 國際合併，可用「國際」分類篩選） */}
         <NewsColumn
           title="輿情一覽"
-          subtitle="台灣主流媒體 · Google News · NewsAPI · GDELT · PTT · Dcard"
+          subtitle="台灣主流媒體 · Google News · NewsAPI · GDELT · Mediastack · GNews"
           items={state.allNews}
           loading={newsLoading}
           error={state.error.news}

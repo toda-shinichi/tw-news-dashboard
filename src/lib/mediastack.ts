@@ -1,5 +1,5 @@
 import { NewsItem } from '@/types'
-import { hashString } from './utils'
+import { hashString, isChineseText } from './utils'
 
 interface MediastackArticle {
   title: string
@@ -42,7 +42,7 @@ export async function fetchMediastack(daysBack = 1): Promise<NewsItem[]> {
           column: 'tw' as const,
         } as NewsItem
       })
-      .filter((item: NewsItem | null): item is NewsItem => item !== null)
+      .filter((item: NewsItem | null): item is NewsItem => item !== null && isChineseText(item.title))
   } catch {
     return []
   }
