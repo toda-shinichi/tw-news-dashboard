@@ -129,8 +129,8 @@ export default function HomePage() {
             <div className="space-y-2">
               <p className="text-base font-semibold text-[#2C2C2C]">{loadingLabel}</p>
               <p className="text-sm text-[#888888] leading-relaxed">
-                需從各媒體抓取新聞並進行 AI 輿情分析<br />
-                約需 <strong className="text-[#5B7FA6]">30–60 秒</strong>，請耐心等候
+                新聞量龐大，依效能約需<br />
+                <strong className="text-[#5B7FA6]">30 秒–數分鐘不等</strong>，請耐心等候
               </p>
             </div>
           </div>
