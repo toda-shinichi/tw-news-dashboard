@@ -9,6 +9,7 @@ import { dedupeLifeNewsAI } from './ai'
 import { NewsItem, NewsColumn, TabRange } from '@/types'
 
 const LIFE_CATS = new Set(['life', 'entertainment', 'finance', 'tech'])
+const KNOWN_CATS = new Set(['politics', 'society', 'life', 'entertainment', 'finance', 'tech'])
 const LIFE_DEDUP_KEY = 'life:dedup:excluded'
 const LIFE_DEDUP_TTL = 3600
 
@@ -110,7 +111,7 @@ export async function getAccumulatedNews(
         const fresh = rawFresh.filter(item => isChineseText(item.title))
         const categorized = fresh.map(item => ({
           ...item,
-          category: item.category ?? classifyCategory(item.title, col),
+          category: KNOWN_CATS.has(item.category ?? '') ? item.category : classifyCategory(item.title, col),
         }))
         let merged = mergeStore(categorized, items)
 
@@ -153,7 +154,7 @@ export async function getAccumulatedNews(
     .filter(item => isChineseText(item.title))
     .map(item => ({
       ...item,
-      category: item.category ?? classifyCategory(item.title, item.column),
+      category: KNOWN_CATS.has(item.category ?? '') ? item.category : classifyCategory(item.title, item.column),
     }))
   return filterByDateRange(chineseItems, tab)
 }

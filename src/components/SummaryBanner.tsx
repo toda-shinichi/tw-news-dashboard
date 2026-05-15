@@ -8,56 +8,92 @@ interface SummaryBannerProps {
   loading?: boolean
 }
 
-interface SectionConfig {
-  key: keyof Pick<SummaryData, 'topics' | 'dynamics' | 'watchlist' | 'viral'>
-  title: string
-  accent: string
-  bg: string
-  numbered?: boolean
-}
+// ─── Direction section (方向預估) ────────────────────────────────────────────
 
-const SECTIONS: SectionConfig[] = [
-  { key: 'topics',    title: '當前主要議題',      accent: '#5B7FA6', bg: '#EBF0F7', numbered: true },
-  { key: 'dynamics',  title: '動向 & 升溫預測',   accent: '#D4874A', bg: '#FDF4EC' },
-  { key: 'watchlist', title: '長期觀察 & 今日警示', accent: '#7A62A8', bg: '#F2EFF8' },
-  { key: 'viral',     title: 'AI 預測社群潛力',   accent: '#C2477A', bg: '#FDF0F5' },
-]
-
-function Section({ title, items, accent, bg, numbered }: SectionConfig & { items: string[] }) {
+function DirectionSection({ items }: { items: string[] }) {
   return (
-    <div
-      className="rounded-lg p-4"
-      style={{ backgroundColor: bg, borderLeft: `3px solid ${accent}` }}
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: accent }}>
-        {title}
+    <div className="rounded-lg p-4" style={{ backgroundColor: '#F2EFF8', borderLeft: '3px solid #7A62A8' }}>
+      <p className="text-[10px] font-semibold uppercase tracking-widest mb-3 text-[#7A62A8]">
+        方向預估
       </p>
+      <p className="text-[10px] text-[#7A62A8]/70 mb-2.5">升溫預測・可能走向・長期觀察・建議警戒</p>
       {items.length === 0 ? (
         <p className="text-xs text-[#AAAAAA]">資料不足</p>
-      ) : numbered ? (
+      ) : (
+        <ul className="space-y-2">
+          {items.map((item, i) => (
+            <li key={i} className="flex items-start gap-2.5">
+              <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-[#7A62A8]" />
+              <span className="text-sm text-[#2C2C2C] leading-snug">{item}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+// ─── Category issue section ───────────────────────────────────────────────────
+
+interface CatConfig {
+  label: string
+  accent: string
+  bg: string
+  badge: string
+  badgeText: string
+}
+
+const CAT_CONFIG: Record<string, CatConfig> = {
+  politics: { label: '政治議題', accent: '#5B7FA6', bg: '#EBF0F7', badge: 'bg-[#5B7FA6]/10 text-[#5B7FA6]', badgeText: '政治' },
+  society:  { label: '社會議題', accent: '#4A8870', bg: '#EFF6F2', badge: 'bg-[#4A8870]/10 text-[#4A8870]', badgeText: '社會' },
+  intl:     { label: '國際議題', accent: '#7A62A8', bg: '#F2EFF8', badge: 'bg-[#7A62A8]/10 text-[#7A62A8]', badgeText: '國際' },
+  life:     { label: '民生議題', accent: '#D4874A', bg: '#FDF4EC', badge: 'bg-[#D4874A]/10 text-[#D4874A]', badgeText: '民生' },
+}
+
+function CategorySection({ catKey, items }: { catKey: string; items: string[] }) {
+  const cfg = CAT_CONFIG[catKey]
+  return (
+    <div className="rounded-lg p-4" style={{ backgroundColor: cfg.bg, borderLeft: `3px solid ${cfg.accent}` }}>
+      <div className="flex items-center gap-2 mb-3">
+        <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: cfg.accent }}>
+          {cfg.label}
+        </p>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-[#AAAAAA]">資料不足</p>
+      ) : (
         <ol className="space-y-2">
           {items.map((item, i) => (
             <li key={i} className="flex items-start gap-2">
-              <span className="text-xs font-semibold w-4 flex-shrink-0 mt-0.5" style={{ color: accent }}>
+              <span className="text-xs font-semibold w-4 flex-shrink-0 mt-0.5" style={{ color: cfg.accent }}>
                 {i + 1}
               </span>
               <span className="text-sm text-[#2C2C2C] leading-snug">{item}</span>
             </li>
           ))}
         </ol>
-      ) : (
-        <ul className="space-y-2.5">
-          {items.map((item, i) => (
-            <li key={i} className="flex items-start gap-2.5">
-              <span
-                className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: accent }}
-              />
-              <span className="text-sm text-[#2C2C2C] leading-snug">{item}</span>
-            </li>
-          ))}
-        </ul>
       )}
+    </div>
+  )
+}
+
+// ─── Viral section ────────────────────────────────────────────────────────────
+
+function ViralSection({ items }: { items: string[] }) {
+  if (items.length === 0) return null
+  return (
+    <div className="rounded-lg p-4" style={{ backgroundColor: '#FDF0F5', borderLeft: '3px solid #C2477A' }}>
+      <p className="text-[10px] font-semibold uppercase tracking-widest mb-3 text-[#C2477A]">
+        AI 預測社群潛力
+      </p>
+      <ul className="space-y-2">
+        {items.map((item, i) => (
+          <li key={i} className="flex items-start gap-2.5">
+            <span className="flex-shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-[#C2477A]" />
+            <span className="text-sm text-[#2C2C2C] leading-snug">{item}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
@@ -103,12 +139,8 @@ function PersonModal({ name, onClose }: { name: string; onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-
-      {/* Panel */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E4DC] bg-[#EFF6F2]">
           <div>
             <h3 className="text-base font-semibold text-[#2C2C2C]">{name}</h3>
@@ -123,8 +155,6 @@ function PersonModal({ name, onClose }: { name: string; onClose: () => void }) {
             </svg>
           </button>
         </div>
-
-        {/* Body */}
         <div className="overflow-y-auto flex-1 px-5 py-3 space-y-2">
           {loading && (
             <div className="space-y-2 py-2">
@@ -133,13 +163,11 @@ function PersonModal({ name, onClose }: { name: string; onClose: () => void }) {
               ))}
             </div>
           )}
-
           {!loading && items.length === 0 && (
             <p className="text-sm text-[#888888] text-center py-10">
               找不到近 30 天內含「{name}」的新聞
             </p>
           )}
-
           {!loading && items.map(item => (
             <a
               key={item.id}
@@ -164,7 +192,6 @@ function PersonModal({ name, onClose }: { name: string; onClose: () => void }) {
             </a>
           ))}
         </div>
-
         {!loading && items.length > 0 && (
           <div className="px-5 py-3 border-t border-[#E8E4DC] text-center">
             <a
@@ -209,7 +236,6 @@ function PeopleRow({ people }: { people: string[] }) {
         </div>
         <p className="text-[10px] text-[#AAAAAA] mt-2.5">點擊人物查看相關新聞</p>
       </div>
-
       {selected && (
         <PersonModal name={selected} onClose={() => setSelected(null)} />
       )}
@@ -227,6 +253,7 @@ function Skeleton() {
         <div className="h-4 bg-[#EFECE5] rounded animate-pulse w-5/6" />
         <div className="h-4 bg-[#EFECE5] rounded animate-pulse w-4/6" />
       </div>
+      <div className="h-24 bg-[#F2EFF8] rounded-lg animate-pulse" />
       <div className="grid grid-cols-2 gap-3">
         {[...Array(4)].map((_, i) => (
           <div key={i} className="rounded-lg p-4 bg-[#F7F5F0] space-y-2">
@@ -265,14 +292,21 @@ export default function SummaryBanner({ data, loading }: SummaryBannerProps) {
           </p>
 
           {/* 當前話題人物（可點擊） */}
-          {data.people?.length > 0 && <PeopleRow people={data.people} />}
+          {(data.people?.length ?? 0) > 0 && <PeopleRow people={data.people} />}
 
-          {/* 四格分析 */}
+          {/* 方向預估（全寬） */}
+          <DirectionSection items={data.direction ?? []} />
+
+          {/* 各分類議題（2×2 格線） */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {SECTIONS.map(({ key, ...rest }) => (
-              <Section key={key} {...rest} items={(data[key] as string[] | undefined) ?? []} />
-            ))}
+            <CategorySection catKey="politics" items={data.politics_issues ?? []} />
+            <CategorySection catKey="society"  items={data.society_issues  ?? []} />
+            <CategorySection catKey="intl"     items={data.intl_issues     ?? []} />
+            <CategorySection catKey="life"     items={data.life_issues     ?? []} />
           </div>
+
+          {/* AI 預測社群潛力 */}
+          <ViralSection items={data.viral ?? []} />
         </div>
       )}
     </div>

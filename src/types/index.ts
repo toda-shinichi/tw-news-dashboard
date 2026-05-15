@@ -27,12 +27,17 @@ export interface NewsResponse {
 
 export interface SummaryData {
   overview: string
-  topics: string[]
-  dynamics: string[]   // 醞釀動向 & 即將升溫（merged）
-  watchlist: string[]  // 長期觀察 & 今日警示（merged）
+  direction: string[]         // 方向預估：升溫預測 + 可能走向 + 長期觀察 + 警戒議題
+  politics_issues: string[]   // 政治：當前重要議題
+  society_issues: string[]    // 社會：當前重要議題
+  intl_issues: string[]       // 國際：當前重要議題
+  life_issues: string[]       // 民生：當前重要議題
   people: string[]
   viral: string[]
   // Legacy fields — kept for reading old cache/history snapshots
+  topics?: string[]
+  dynamics?: string[]
+  watchlist?: string[]
   brewing?: string[]
   upcoming?: string[]
   longterm?: string[]

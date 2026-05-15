@@ -85,9 +85,11 @@ export async function analyzeSentiment(
 
 const EMPTY_SUMMARY: SummaryData = {
   overview: '',
-  topics: [],
-  dynamics: [],
-  watchlist: [],
+  direction: [],
+  politics_issues: [],
+  society_issues: [],
+  intl_issues: [],
+  life_issues: [],
   people: [],
   viral: [],
 }
@@ -119,6 +121,37 @@ function buildStatsBlock(stats: NewsStats): string {
   ].join('\n')
 }
 
+function buildCategoryTitles(items: NewsItem[]): string {
+  const LIFE_CATS_AI = new Set(['life', 'entertainment', 'finance', 'tech'])
+  const buckets: Record<string, string[]> = {
+    politics: [], society: [], intl: [], life: [],
+  }
+  for (const item of items) {
+    if (item.column === 'intl') {
+      buckets.intl.push(item.title)
+    } else if (item.category === 'politics') {
+      buckets.politics.push(item.title)
+    } else if (item.category === 'society') {
+      buckets.society.push(item.title)
+    } else if (LIFE_CATS_AI.has(item.category ?? '')) {
+      buckets.life.push(item.title)
+    }
+  }
+  const lines: string[] = []
+  const labels: [string, string][] = [
+    ['politics', '政治'], ['society', '社會'], ['intl', '國際'], ['life', '民生'],
+  ]
+  for (const [key, label] of labels) {
+    const titles = buckets[key].slice(0, 25)
+    if (titles.length > 0) {
+      lines.push(`【${label}新聞（${titles.length}則）】`)
+      titles.forEach((t, i) => lines.push(`${i + 1}. ${t}`))
+      lines.push('')
+    }
+  }
+  return lines.join('\n')
+}
+
 export async function generateSummary(items: NewsItem[], social?: SocialSignals, stats?: NewsStats): Promise<SummaryData> {
   if (!process.env.CPA_API_KEY)
     return {
@@ -129,10 +162,7 @@ export async function generateSummary(items: NewsItem[], social?: SocialSignals,
     return { ...EMPTY_SUMMARY, overview: '此時段目前沒有足夠的新聞資料進行分析。' }
 
   const client = getClient()
-  const titles = items
-    .slice(0, 80)
-    .map((item, i) => `${i + 1}. ${item.title}`)
-    .join('\n')
+  const categoryTitles = buildCategoryTitles(items)
 
   try {
     const resp = await client.chat.completions.create({
@@ -141,51 +171,70 @@ export async function generateSummary(items: NewsItem[], social?: SocialSignals,
         {
           role: 'user',
           content:
-            '你是台灣輿情分析師。分析標題，只輸出 JSON，不要其他文字。\n格式：{"overview":"...","topics":["..."],"dynamics":["..."],"watchlist":["..."],"people":["..."],"viral":["..."]}\n標題：台積電宣布赴美擴廠、賴清德出訪歐洲、選舉民調公布、颱風警報發布、美中貿易談判。\n輸出：',
+            '你是台灣輿情分析師。分析標題，只輸出 JSON，不要其他文字。\n' +
+            '格式：{"overview":"...","direction":["..."],"politics_issues":["..."],"society_issues":["..."],"intl_issues":["..."],"life_issues":["..."],"people":["..."],"viral":["..."]}\n' +
+            '【政治新聞】台積電擴廠爭議、立法院預算審查。\n【社會新聞】颱風警報發布、捷運事故。\n【國際新聞】美中貿易談判、歐盟峰會。\n【民生新聞】油價調漲、房租上漲。\n輸出：',
         },
         {
           role: 'assistant',
           content:
-            '{"overview":"本期台灣輿情以科技外交與政治選舉為雙主軸，整體基調偏中性偏積極。台積電宣布赴美大規模擴廠，在帶動產業信心的同時，也引發各界對台灣產業空洞化的隱憂，相關辯論預計在業界與政界持續延燒。賴清德歐洲出訪行程備受外界矚目，此次外交布局被視為強化台灣與民主陣營連結的重要一步，但北京可能的反制動作亦在可預期範圍之內，兩岸緊張程度值得密切追蹤。與此同時，選舉民調持續更新，各黨消長牽動策略布局；颱風警報發布為台灣增添民生壓力；美中貿易談判的演進亦直接影響台灣出口產業的未來走向。整體而言，政治、經濟、外交三條線同步推進，輿論情緒在審慎樂觀與不安觀望之間拉鋸。","topics":["台積電赴美擴廠：引發產業空洞化辯論，供應鏈去台化疑慮升溫","賴清德歐洲出訪：強化民主陣營外交布局，北京反制動作受關注","選舉民調各黨消長：初選提名進入關鍵期，藍綠攻防全面展開","颱風警報防災應對：若轉向本島將引爆大規模民生與防災報導","美中貿易談判進展：直接影響台灣半導體與科技出口產業走向"],"dynamics":["台積電擴廠引發的產業空洞化辯論正在業界發酵，供應鏈去台化疑慮持續升溫","賴清德出訪後北京可能採取外交或軍事反制，兩岸緊張程度值得持續追蹤","選舉民調進入關鍵期，各黨策略將隨數字變動迅速調整","颱風若轉向台灣本島，將在48小時內引爆大規模防災討論"],"watchlist":["半導體供應鏈重組對台灣全球分工角色的長遠影響","台美關係深化與兩岸對峙並存的戰略平衡挑戰","颱風路徑48小時仍不確定，若轉向需立即進入防災應變","賴清德出訪期間解放軍演習風險升高，需高度關注"],"people":["賴清德","黃仁勳","川普","習近平","柯文哲"],"viral":["颱風警報發布，各地網友瘋傳疏散路線與物資清單，防災話題熱度激增","台積電赴美擴廠消息引爆「產業空洞化」論戰，PTT科技板大量討論","選舉民調截圖熱傳，藍綠支持者論戰激烈","賴清德出訪期間的外交禮遇畫面在Threads與IG流傳","美中貿易戰對台灣薪資與就業影響的討論在Dcard升溫"]}',
+            '{"overview":"本期台灣輿情以科技外交與政治選舉為雙主軸。台積電擴廠爭議引發產業空洞化辯論；颱風警報帶動防災討論；美中貿易談判牽動台灣出口走向。整體情緒在審慎樂觀與不安觀望之間拉鋸。",' +
+            '"direction":["台積電擴廠將持續引爆產業空洞化論戰，需追蹤政策回應動向","颱風路徑未定，若轉向本島48小時內防災討論將全面升溫","美中貿易談判演進直接影響台灣半導體出口，需長期關注","油價與房租齊漲形成民生壓力，消費信心指數值得觀察"],' +
+            '"politics_issues":["台積電赴美擴廠：引發產業空洞化辯論，供應鏈去台化疑慮升溫","立法院預算審查：朝野角力預算刪減，行政院面臨壓力"],' +
+            '"society_issues":["颱風警報防災應對：路徑未定，各縣市啟動防颱準備","捷運事故調查：肇因調查與行車安全檢討引發討論"],' +
+            '"intl_issues":["美中貿易談判：關稅動向直接影響台灣科技出口","歐盟峰會決議：歐洲對中政策調整牽動台歐關係"],' +
+            '"life_issues":["油價調漲：下週汽柴油價格調整，影響通勤成本","房租上漲：六都租金指數續創新高，租屋族壓力加劇"],' +
+            '"people":["賴清德","黃仁勳","川普","習近平"],' +
+            '"viral":["颱風警報網友瘋傳疏散路線與防災清單","台積電擴廠引爆產業空洞化論戰"]}',
         },
         {
           role: 'user',
           content: [
             '你是台灣輿情分析師，熟悉台灣政治、社會、經濟、外交生態，能從大量新聞中萃取關鍵趨勢。',
-            '請綜合以下【數據摘要】、【過去12小時新聞標題】（含部分英文國際新聞，請理解後以繁體中文分析）與【社群訊號】，全程用繁體中文輸出 JSON，不要其他文字。',
+            '請綜合以下【數據摘要】、【各類別新聞標題】（含部分英文國際新聞，請理解後以繁體中文分析）與【社群訊號】，全程用繁體中文輸出 JSON，不要其他文字。',
             '',
-            '格式：',
-            '{"overview":"整體輿情深度摘要，必須150至300字，涵蓋：當期主要事件脈絡、各議題之間的關聯性、整體輿論情緒走向（樂觀/悲觀/焦慮/對立等），以及對台灣社會的潛在影響；文字通順、具分析深度，不可流水帳羅列","topics":["五大當前議題，每項格式為『議題名稱：具體說明內容』，說明部分需點出核心爭點、涉及對象或影響範圍（整項40字以內）"],"dynamics":["4至6項動向預測，整合正在醞釀中的發展與即將可能升溫的話題，說明趨勢方向與觸發條件（每項35字以內）"],"watchlist":["3至5項觀察清單，整合需長期追蹤的重要議題與今日特別警示，需具體說明風險或觀察重點（每項35字以內）"],"people":["當前最受關注的4至6位人物姓名"],"viral":["嚴格根據上方【過去12小時新聞標題】中實際出現的事件，評估3至5個最可能在台灣社群引爆討論的話題；若有【社群訊號】則優先參考。絕對不得自行創造或假設任何標題中未出現的事件、人物或情境。每項格式：話題名稱：說明（35字以內）"]}',
+            '格式（嚴格遵守，欄位名稱不得更改）：',
+            '{',
+            '  "overview": "整體輿情深度摘要，150至300字，涵蓋：當期主要事件脈絡、各議題關聯性、輿論情緒走向、對台灣社會潛在影響；文字通順具分析深度，不可流水帳",',
+            '  "direction": ["5至8項方向預估，整合：升溫預測、可能走向、值得長期關注的議題、建議警戒或高度關注的事態；每項35字以內，格式：具體描述方向與觸發條件或風險"],',
+            '  "politics_issues": ["依政治新聞數量多寡或重要性，條列5至8項當前最重要政治議題，格式：議題名稱：說明（整項40字以內）"],',
+            '  "society_issues": ["依社會新聞數量多寡或重要性，條列5至8項當前最重要社會議題，格式：議題名稱：說明（整項40字以內）"],',
+            '  "intl_issues": ["依國際新聞數量多寡或重要性，條列5至8項當前最重要國際議題，格式：議題名稱：說明（整項40字以內）"],',
+            '  "life_issues": ["依民生新聞數量多寡或重要性，條列5至8項當前最重要民生議題，格式：議題名稱：說明（整項40字以內）"],',
+            '  "people": ["當前最受關注的4至6位人物姓名"],',
+            '  "viral": ["嚴格根據上方新聞標題中實際出現的事件，評估3至5個最可能在台灣社群引爆討論的話題；若有社群訊號則優先參考。絕對不得自行創造未出現的事件。格式：話題名稱：說明（35字以內）"]',
+            '}',
             '',
             ...(stats ? ['【數據摘要】', buildStatsBlock(stats), ''] : []),
-            '【過去12小時新聞標題（最新80則）】',
-            titles,
-            ...(social ? ['', '【社群訊號】', buildSocialBlock(social)] : []),
-            '',
+            '【各類別新聞標題（最新各取25則）】',
+            categoryTitles,
+            ...(social ? ['【社群訊號】', buildSocialBlock(social), ''] : []),
             '輸出：',
           ].join('\n'),
         },
       ],
       temperature: 0.3,
-      max_tokens: 2000,
+      max_tokens: 3000,
     })
 
     const text = resp.choices[0]?.message?.content?.trim() || '{}'
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]) as SummaryData
+      const parsed = JSON.parse(jsonMatch[0]) as Partial<SummaryData>
       return {
-        overview:  parsed.overview || '',
-        topics:    Array.isArray(parsed.topics)    ? parsed.topics.slice(0, 5)    : [],
-        dynamics:  Array.isArray(parsed.dynamics)  ? parsed.dynamics.slice(0, 6)  : [],
-        watchlist: Array.isArray(parsed.watchlist) ? parsed.watchlist.slice(0, 5) : [],
-        people:    Array.isArray(parsed.people)    ? parsed.people.slice(0, 6)    : [],
-        viral:     Array.isArray(parsed.viral)     ? parsed.viral.slice(0, 10)    : [],
+        overview:         parsed.overview         || '',
+        direction:        Array.isArray(parsed.direction)        ? parsed.direction.slice(0, 8)        : [],
+        politics_issues:  Array.isArray(parsed.politics_issues)  ? parsed.politics_issues.slice(0, 8)  : [],
+        society_issues:   Array.isArray(parsed.society_issues)   ? parsed.society_issues.slice(0, 8)   : [],
+        intl_issues:      Array.isArray(parsed.intl_issues)      ? parsed.intl_issues.slice(0, 8)      : [],
+        life_issues:      Array.isArray(parsed.life_issues)      ? parsed.life_issues.slice(0, 8)      : [],
+        people:           Array.isArray(parsed.people)           ? parsed.people.slice(0, 6)           : [],
+        viral:            Array.isArray(parsed.viral)            ? parsed.viral.slice(0, 5)            : [],
       }
     }
     return { ...EMPTY_SUMMARY, overview: '分析結果格式異常，請稍後再試。' }
   } catch (err) {
-    console.error('[generateSummary] model error:', MODEL_QUALITY, err)
+    console.error('[generateSummary] model error:', MODEL_FAST, err)
     return { ...EMPTY_SUMMARY, overview: 'AI 分析服務暫時無法使用，請稍後再試。' }
   }
 }
