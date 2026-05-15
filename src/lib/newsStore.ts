@@ -47,13 +47,20 @@ async function fetchExternalTW(isBackfill: boolean): Promise<NewsItem[]> {
 }
 
 async function fetchFresh(col: NewsColumn, isBackfill: boolean): Promise<NewsItem[]> {
-  const gdeltSpan = isBackfill ? '30d' : '7d'
+  // Backfill: cast a wide net to fill the past 24h from cold start.
+  // Regular: 1d span is enough — mergeStore accumulates across cycles.
+  const gdeltSpan     = isBackfill ? '7d'  : '1d'
+  const gdeltRecords  = isBackfill ? 250   : 50
+  // NewsAPI: on backfill fetch past 24h explicitly; otherwise just latest batch
+  const newsAPIFrom   = isBackfill
+    ? new Date(Date.now() - 26 * 3600_000).toISOString().slice(0, 19) + 'Z'
+    : undefined
 
   if (col === 'tw') {
     const [rss, api, gdelt, ext, ptt, dcard] = await Promise.all([
       fetchAllRSS('tw'),
-      fetchNewsAPI(),
-      fetchGDELTTaiwan(gdeltSpan),
+      fetchNewsAPI(newsAPIFrom),
+      fetchGDELTTaiwan(gdeltSpan, gdeltRecords),
       fetchExternalTW(isBackfill),
       fetchPTTAsNewsItems(),
       fetchDcardAsNewsItems(),
@@ -62,7 +69,7 @@ async function fetchFresh(col: NewsColumn, isBackfill: boolean): Promise<NewsIte
   } else {
     const [rss, gdelt] = await Promise.all([
       fetchAllRSS('intl'),
-      fetchGDELT(gdeltSpan),
+      fetchGDELT(gdeltSpan, gdeltRecords),
     ])
     return [...rss, ...gdelt]
   }

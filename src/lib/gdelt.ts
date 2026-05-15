@@ -65,11 +65,20 @@ async function gdeltFetch(query: string, timespan: string, column: 'tw' | 'intl'
   }
 }
 
-export async function fetchGDELT(timespan = '1d'): Promise<NewsItem[]> {
-  return gdeltFetch('Taiwan sourcelang:english', timespan, 'intl', 50)
+export async function fetchGDELT(timespan = '1d', maxrecords = 50): Promise<NewsItem[]> {
+  return gdeltFetch('Taiwan sourcelang:english', timespan, 'intl', maxrecords)
 }
 
-// GDELT also indexes many Traditional Chinese Taiwanese news sources
-export async function fetchGDELTTaiwan(timespan = '1d'): Promise<NewsItem[]> {
-  return gdeltFetch('台灣 OR Taiwan sourcecountry:TW', timespan, 'tw', 50)
+export async function fetchGDELTTaiwan(timespan = '1d', maxrecords = 50): Promise<NewsItem[]> {
+  const [main, zh] = await Promise.allSettled([
+    gdeltFetch('台灣 OR Taiwan sourcecountry:TW', timespan, 'tw', maxrecords),
+    // Second query targets Chinese-language coverage specifically
+    maxrecords > 50
+      ? gdeltFetch('台灣 sourcelang:Chinese', timespan, 'tw', maxrecords)
+      : Promise.resolve([] as NewsItem[]),
+  ])
+  return [
+    ...(main.status === 'fulfilled' ? main.value : []),
+    ...(zh.status === 'fulfilled' ? zh.value : []),
+  ]
 }
