@@ -99,17 +99,15 @@ export async function getAccumulatedNews(
       await cacheSet(lockKey, true, 120) // 120-second lock TTL
       try {
         const fresh = await fetchFresh(col, isBackfill)
+        // Respect defaultCategory from RSS sources — only fill in classifier
+        // when the source didn't provide an explicit category.
+        // Do NOT reclassify the merged store: that would override defaultCategory
+        // for explicitly-tagged feeds (自由時報社會, 中央社社會, etc.).
         const categorized = fresh.map(item => ({
           ...item,
           category: item.category ?? classifyCategory(item.title, col),
         }))
-        const merged = mergeStore(categorized, items)
-        // Re-classify the entire store on every refresh so that items cached
-        // before keyword rules improved get corrected automatically.
-        items = merged.map(item => ({
-          ...item,
-          category: classifyCategory(item.title, col),
-        }))
+        items = mergeStore(categorized, items)
         await Promise.all([
           cacheSet(accKey, items, TTL),
           cacheSet(tsKey, Date.now(), TTL),

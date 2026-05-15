@@ -90,7 +90,7 @@ const RSS_SOURCES: RSSSource[] = [
   { name: '新頭殼文化',  url: 'https://newtalk.tw/rss/category/9',                      column: 'tw', defaultCategory: 'life' },
   { name: '新頭殼娛樂',  url: 'https://newtalk.tw/rss/category/18',                     column: 'tw', defaultCategory: 'life' },
   { name: '風傳媒財經',  url: STORM(7),                                                  column: 'tw', defaultCategory: 'life' },
-  { name: '風傳媒科技',  url: STORM(9),                                                  column: 'tw', defaultCategory: 'life' },
+  { name: '風傳媒社會',  url: STORM(9),                                                  column: 'tw', defaultCategory: 'society' },
   { name: '風傳媒生活',  url: STORM(10),                                                 column: 'tw', defaultCategory: 'life' },
   { name: '風傳媒文化',  url: STORM(8),                                                  column: 'tw', defaultCategory: 'life' },
   { name: '風傳媒娛樂',  url: STORM(17),                                                 column: 'tw', defaultCategory: 'life' },
