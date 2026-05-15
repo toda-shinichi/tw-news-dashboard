@@ -3,6 +3,7 @@ import { generateSummary } from '@/lib/ai'
 import { cacheGet, cacheSet } from '@/lib/cache'
 import { getAccumulatedNews } from '@/lib/newsStore'
 import { saveSnapshot } from '@/lib/history'
+import { fetchSocialSignals } from '@/lib/social'
 import { TabRange, SummaryResponse, SummaryData } from '@/types'
 
 export const runtime = 'nodejs'
@@ -23,13 +24,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ...cached, fromCache: true })
   }
 
-  const [twItems, intlItems] = await Promise.all([
+  const [twItems, intlItems, social] = await Promise.all([
     getAccumulatedNews('tw', tab, force, true),
     getAccumulatedNews('intl', tab, force, true),
+    fetchSocialSignals(),
   ])
   const allItems = [...twItems, ...intlItems]
 
-  const data: SummaryData = await generateSummary(allItems)
+  const data: SummaryData = await generateSummary(allItems, social)
 
   const response: SummaryResponse = {
     data,

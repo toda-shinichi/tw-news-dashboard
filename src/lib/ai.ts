@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import { NewsItem, SentimentLabel, SummaryData } from '@/types'
+import type { SocialSignals } from './social'
 
 const MODEL_QUALITY = 'gpt-5.4-mini-as'
 const MODEL_FAST    = 'gpt-5.4-mini-as'
@@ -87,7 +88,24 @@ const EMPTY_SUMMARY: SummaryData = {
   alerts: [],
 }
 
-export async function generateSummary(items: NewsItem[]): Promise<SummaryData> {
+function buildSocialBlock(s: SocialSignals): string {
+  const lines: string[] = []
+  if (s.pttHot.length > 0) {
+    lines.push('[PTT 八卦板熱門（推文數排序）]')
+    s.pttHot.slice(0, 12).forEach(t => lines.push(`・${t}`))
+  }
+  if (s.dcardHot.length > 0) {
+    lines.push('[Dcard 熱門文章]')
+    s.dcardHot.slice(0, 10).forEach(t => lines.push(`・${t}`))
+  }
+  if (s.googleTrends.length > 0) {
+    lines.push('[Google Trends 台灣熱搜（過去 24 小時）]')
+    lines.push(s.googleTrends.slice(0, 15).join('、'))
+  }
+  return lines.join('\n')
+}
+
+export async function generateSummary(items: NewsItem[], social?: SocialSignals): Promise<SummaryData> {
   if (!process.env.CPA_API_KEY)
     return {
       ...EMPTY_SUMMARY,
@@ -118,11 +136,22 @@ export async function generateSummary(items: NewsItem[]): Promise<SummaryData> {
         },
         {
           role: 'user',
-          content: `你是台灣社群輿情分析師，熟悉 PTT、Dcard、Instagram、Threads、YouTube 台灣社群的討論生態。分析以下新聞標題，用繁體中文只輸出 JSON，不要其他文字。\n格式：{"overview":"整體輿情2-3句含情緒判讀","topics":["當前五大議題（15字以內）"],"brewing":["正在醞釀的3個動向，說明往哪個方向發展（30字以內）"],"upcoming":["2-3個即將可能升溫的話題及原因（30字以內）"],"longterm":["2-3個長期需關注的重要議題（25字以內）"],"people":["當前最受關注的4-6位人物姓名"],"viral":["根據台灣社群生態（PTT八卦板、Dcard、IG、Threads），評估2-3個最可能在這些平台引爆討論的話題：說明哪個族群會討論、討論走向及潛在爭議點（40字以內）"],"alerts":["今日需特別注意的2-3個警示：潛在危機、爭議升溫或緊張情勢（40字以內，含具體說明）"]}\n新聞標題：\n${titles}\n輸出：`,
+          content: [
+            '你是台灣社群輿情分析師，熟悉 PTT、Dcard、Instagram、Threads、YouTube 台灣社群的討論生態。',
+            '請綜合以下【新聞標題】與【社群訊號】，用繁體中文只輸出 JSON，不要其他文字。',
+            '',
+            '格式：{"overview":"整體輿情2-3句含情緒判讀","topics":["當前五大議題（15字以內）"],"brewing":["正在醞釀的3個動向，說明往哪個方向發展（30字以內）"],"upcoming":["2-3個即將可能升溫的話題及原因（30字以內）"],"longterm":["2-3個長期需關注的重要議題（25字以內）"],"people":["當前最受關注的4-6位人物姓名"],"viral":["根據PTT/Dcard熱門文章與Google Trends熱搜，綜合評估5-10個最可能在台灣社群引爆討論的話題，優先納入社群訊號中已熱議者，說明討論族群與潛在爭議方向（35字以內）"],"alerts":["今日需特別注意的2-3個警示：潛在危機、爭議升溫或緊張情勢（40字以內）"]}',
+            '',
+            '【新聞標題】',
+            titles,
+            ...(social ? ['', '【社群訊號】', buildSocialBlock(social)] : []),
+            '',
+            '輸出：',
+          ].join('\n'),
         },
       ],
       temperature: 0.3,
-      max_tokens: 1400,
+      max_tokens: 2000,
     })
 
     const text = resp.choices[0]?.message?.content?.trim() || '{}'
@@ -136,7 +165,7 @@ export async function generateSummary(items: NewsItem[]): Promise<SummaryData> {
         upcoming: Array.isArray(parsed.upcoming) ? parsed.upcoming.slice(0, 3) : [],
         longterm: Array.isArray(parsed.longterm) ? parsed.longterm.slice(0, 3) : [],
         people:   Array.isArray(parsed.people)   ? parsed.people.slice(0, 6)   : [],
-        viral:    Array.isArray(parsed.viral)    ? parsed.viral.slice(0, 3)    : [],
+        viral:    Array.isArray(parsed.viral)    ? parsed.viral.slice(0, 10)   : [],
         alerts:   Array.isArray(parsed.alerts)   ? parsed.alerts.slice(0, 3)   : [],
       }
     }

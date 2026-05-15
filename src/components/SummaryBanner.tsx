@@ -21,7 +21,7 @@ const SECTIONS: SectionConfig[] = [
   { key: 'brewing',  title: '醞釀中的動向', accent: '#D4874A', bg: '#FDF4EC' },
   { key: 'upcoming', title: '即將升溫話題', accent: '#C0554A', bg: '#FDF0EF' },
   { key: 'longterm', title: '長期觀察重點', accent: '#7A62A8', bg: '#F2EFF8' },
-  { key: 'viral',    title: '社群潛力話題', accent: '#C2477A', bg: '#FDF0F5' },
+  { key: 'viral',    title: 'AI 預測社群潛力', accent: '#C2477A', bg: '#FDF0F5' },
   { key: 'alerts',   title: '今日警示',     accent: '#B84040', bg: '#FDF0EF' },
 ]
 
