@@ -51,12 +51,16 @@ const RSS_SOURCES: RSSSource[] = [
   gnq('台灣 車禍 火災 爆炸 搜救 失蹤', 'tw', '事故補充', 'society'),
   gnq('台積電 台股 科技 AI 房市', 'tw', '民生補充', 'life'),
 
-  // ── 國際 Google News（5 條）─────────────────────────
+  // ── 國際 Google News ──────────────────────────────────
   gnq('Taiwan politics diplomacy security', 'intl', 'Taiwan', undefined, 'en-US', 'US', 'US:en'),
   gnq('Taiwan China military strait conflict', 'intl', '台海安全', undefined, 'en-US', 'US', 'US:en'),
   gnq('US China trade tariff sanctions economy', 'intl', '美中貿易', undefined, 'en-US', 'US', 'US:en'),
   gnq('Ukraine Russia war Middle East crisis', 'intl', '國際衝突', undefined, 'en-US', 'US', 'US:en'),
+  // 中文國際新聞
   gnq('兩岸關係 台海局勢 中共 解放軍', 'intl', '兩岸'),
+  gnq('川普 習近平 美中關係 貿易戰 關稅', 'intl', '川習美中', 'politics'),
+  gnq('俄烏戰爭 以巴衝突 中東局勢 國際局勢', 'intl', '國際衝突中文', 'politics'),
+  gnq('南海 印太 美日韓 北約 峰會', 'intl', '印太安全', 'politics'),
 ]
 
 function decodeEntities(str: string): string {

@@ -170,16 +170,19 @@ const INTL_POLITICS = [
   '制裁', '外交部', '國防部', '憲法', '大法官', '政策',
 ]
 
-// tw column: politics only fires on domestic keywords
+const ALL_POLITICS = [...DOMESTIC_POLITICS, ...INTL_POLITICS]
+
+// Both columns use the full politics keyword set.
+// Taiwan's news is heavily intertwined with cross-strait/US-Taiwan relations,
+// so separating domestic-only caused massive misclassification of tw-column articles.
 const CATEGORY_RULES_TW = [
   ...SHARED_RULES,
-  { cat: 'politics' as NewsCategory, words: DOMESTIC_POLITICS },
+  { cat: 'politics' as NewsCategory, words: ALL_POLITICS },
 ]
 
-// intl column (or fallback): politics includes both domestic + international
 const CATEGORY_RULES_INTL = [
   ...SHARED_RULES,
-  { cat: 'politics' as NewsCategory, words: [...DOMESTIC_POLITICS, ...INTL_POLITICS] },
+  { cat: 'politics' as NewsCategory, words: ALL_POLITICS },
 ]
 
 // English keyword sets for classifying international (non-Chinese) titles
@@ -236,6 +239,10 @@ const HOT_STOPWORDS = new Set([
   '台灣', '記者', '報導', '指出', '表示', '說明', '今天', '今日', '宣布',
   '發表', '公布', '提出', '日前', '相關', '部分', '進行', '已經', '目前',
   '最新', '消息', '新聞', '媒體', '分析', '顯示', '根據', '認為', '強調',
+  // 新聞套語動詞 / 形容詞
+  '曝光', '傳出', '爆料', '回應', '回應說', '對此', '外界', '透露', '坦言',
+  '批評', '呼籲', '警告', '否認', '確認', '聲稱', '澄清', '不滿', '質疑',
+  '拍板', '拍板定案', '定案', '敲定', '決定', '宣稱',
   // 媒體來源名稱碎片
   '新聞網', '電子報', '聯合', '中央', '中時', '民視', '三立', '自由',
   '風傳', '報導者', '公視', '東森', '關鍵', '評論', '時報', '日報',
@@ -267,9 +274,12 @@ export function computeKeywordCounts(
   // Lower threshold than computeHotKeywords to surface more terms
   const minCount = Math.max(2, Math.ceil(titles.length * 0.02))
 
+  // Longer terms get a frequency bonus so 3-char compounds beat their 2-char sub-grams
+  const lenBonus = (w: string) => w.length >= 4 ? 2.0 : w.length >= 3 ? 1.5 : 1.0
+
   const sorted = [...freq.entries()]
     .filter(([, c]) => c >= minCount)
-    .sort(([wa, a], [wb, b]) => b - a || wb.length - wa.length)
+    .sort(([wa, a], [wb, b]) => b * lenBonus(wb) - a * lenBonus(wa))
 
   const result: Array<{ word: string; count: number }> = []
   for (const [word, count] of sorted) {
@@ -306,12 +316,12 @@ export function computeHotKeywords(
 
   const minCount = Math.max(2, Math.ceil(titles.length * 0.1))
 
-  // Sort by frequency DESC, then length DESC (prefer longer/more specific terms)
+  const lenBonus = (w: string) => w.length >= 4 ? 2.0 : w.length >= 3 ? 1.5 : 1.0
+
   const sorted = [...freq.entries()]
     .filter(([, c]) => c >= minCount)
-    .sort(([wa, a], [wb, b]) => b - a || wb.length - wa.length)
+    .sort(([wa, a], [wb, b]) => b * lenBonus(wb) - a * lenBonus(wa))
 
-  // Remove substrings of already-selected longer terms
   const result: string[] = []
   for (const [word] of sorted) {
     if (!result.some(r => r.includes(word) || word.includes(r))) {

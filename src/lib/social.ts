@@ -57,7 +57,10 @@ async function fetchPTTRaw(): Promise<PTTArticle[]> {
     headers: PTT_HEADERS,
     signal: AbortSignal.timeout(7000),
   })
-  if (!r1.ok) return []
+  if (!r1.ok) {
+    console.warn('[PTT] fetch failed:', r1.status, r1.statusText)
+    return []
+  }
 
   const d1 = await r1.json()
   let articles: PTTArticle[] = d1.articles ?? []
