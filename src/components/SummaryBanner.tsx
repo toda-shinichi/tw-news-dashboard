@@ -117,8 +117,8 @@ function PersonModal({ name, onClose }: { name: string; onClose: () => void }) {
     const fetchNews = async () => {
       try {
         const [tw, intl] = await Promise.all([
-          fetch(`/api/news?q=${encodeURIComponent(name)}&tab=month&col=tw&limit=20`).then(r => r.json()),
-          fetch(`/api/news?q=${encodeURIComponent(name)}&tab=month&col=intl&limit=10`).then(r => r.json()),
+          fetch(`/api/news?q=${encodeURIComponent(name)}&tab=today&col=tw&limit=20`).then(r => r.json()),
+          fetch(`/api/news?q=${encodeURIComponent(name)}&tab=today&col=intl&limit=10`).then(r => r.json()),
         ])
         if (!cancelled) {
           const combined: NewsItem[] = [
@@ -144,7 +144,7 @@ function PersonModal({ name, onClose }: { name: string; onClose: () => void }) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8E4DC] bg-[#EFF6F2]">
           <div>
             <h3 className="text-base font-semibold text-[#2C2C2C]">{name}</h3>
-            <p className="text-xs text-[#888888] mt-0.5">近 30 天相關新聞</p>
+            <p className="text-xs text-[#888888] mt-0.5">24 小時內相關新聞</p>
           </div>
           <button
             onClick={onClose}
@@ -165,7 +165,7 @@ function PersonModal({ name, onClose }: { name: string; onClose: () => void }) {
           )}
           {!loading && items.length === 0 && (
             <p className="text-sm text-[#888888] text-center py-10">
-              找不到近 30 天內含「{name}」的新聞
+              24 小時內沒有含「{name}」的新聞
             </p>
           )}
           {!loading && items.map(item => (
@@ -194,12 +194,7 @@ function PersonModal({ name, onClose }: { name: string; onClose: () => void }) {
         </div>
         {!loading && items.length > 0 && (
           <div className="px-5 py-3 border-t border-[#E8E4DC] text-center">
-            <a
-              href={`/archive?q=${encodeURIComponent(name)}`}
-              className="text-xs text-[#5B7FA6] hover:underline"
-            >
-              在存檔中搜尋更多「{name}」相關新聞 →
-            </a>
+            <span className="text-xs text-[#AAAAAA]">僅顯示過去 24 小時內相關報導</span>
           </div>
         )}
       </div>

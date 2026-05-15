@@ -2,12 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Header from '@/components/Header'
-import TabBar from '@/components/TabBar'
 import SummaryBanner from '@/components/SummaryBanner'
-import KeywordCloud from '@/components/KeywordCloud'
 import HotList from '@/components/HotList'
 import NewsColumn from '@/components/NewsColumn'
-import { TabRange, NewsItem, SummaryData } from '@/types'
+import { NewsItem, SummaryData } from '@/types'
 
 interface HotData {
   topics: string[]
@@ -18,13 +16,11 @@ interface HotData {
 interface PageState {
   allNews: NewsItem[]
   summary: SummaryData | null
-  keywords: Array<{ word: string; count: number }>
   hotlist: { tw: HotData }
   updatedAt?: string
   loading: {
     news: boolean
     summary: boolean
-    keywords: boolean
     hotlist: boolean
   }
   error: { news?: string }
@@ -36,9 +32,8 @@ const EMPTY_HOTDATA: HotData = { topics: [], keywords: [], people: [] }
 const INITIAL_STATE: PageState = {
   allNews: [],
   summary: null,
-  keywords: [],
   hotlist: { tw: EMPTY_HOTDATA },
-  loading: { news: true, summary: true, keywords: true, hotlist: true },
+  loading: { news: true, summary: true, hotlist: true },
   error: {},
   building: false,
 }
@@ -49,9 +44,7 @@ interface Progress {
 }
 
 export default function HomePage() {
-  const [tab, setTab] = useState<TabRange>('today')
   const [state, setState] = useState<PageState>(INITIAL_STATE)
-  const [selectedKeyword, setSelectedKeyword] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [progress, setProgress] = useState<Progress | null>({ pct: 5, label: '正在抓取新聞…' })
 
@@ -65,11 +58,11 @@ export default function HomePage() {
     }
   }, [])
 
-  const fetchData = useCallback(async (activeTab: TabRange, force = false) => {
+  const fetchData = useCallback(async (force = false) => {
     const qs = force ? '&force=1' : ''
     setState(prev => ({
       ...prev,
-      loading: { news: true, summary: true, keywords: true, hotlist: true },
+      loading: { news: true, summary: true, hotlist: true },
       error: {},
       building: false,
     }))
@@ -77,16 +70,15 @@ export default function HomePage() {
 
     // Fetch tw + intl news in parallel; merge into one list
     const [twData, intlData] = await Promise.all([
-      safeFetch(`/api/news?tab=${activeTab}&col=tw${qs}`),
-      safeFetch(`/api/news?tab=${activeTab}&col=intl${qs}`),
+      safeFetch(`/api/news?tab=today&col=tw${qs}`),
+      safeFetch(`/api/news?tab=today&col=intl${qs}`),
     ])
 
     setProgress({ pct: 55, label: 'AI 正在分析輿情…' })
 
-    const [summaryData, keywordsData, hotlistData] = await Promise.all([
-      safeFetch(`/api/summary?tab=${activeTab}${qs}`),
-      safeFetch(`/api/keywords?tab=${activeTab}${qs}`),
-      safeFetch(`/api/hotlist?tab=${activeTab}${qs}`),
+    const [summaryData, hotlistData] = await Promise.all([
+      safeFetch(`/api/summary?tab=today${qs}`),
+      safeFetch(`/api/hotlist?tab=today${qs}`),
     ])
 
     const twItems: NewsItem[]   = twData?.items   ?? []
@@ -108,11 +100,10 @@ export default function HomePage() {
     setState(prev => ({
       ...prev,
       allNews: allItems,
-      summary:  summaryData?.data      ?? null,
-      keywords: keywordsData?.keywords ?? [],
-      hotlist:  { tw: hotlistData?.tw  ?? EMPTY_HOTDATA },
+      summary:  summaryData?.data     ?? null,
+      hotlist:  { tw: hotlistData?.tw ?? EMPTY_HOTDATA },
       updatedAt: twData?.updatedAt,
-      loading: { news: false, summary: false, keywords: false, hotlist: false },
+      loading: { news: false, summary: false, hotlist: false },
       building: !newsFailed && allItems.length === 0,
       error: { news: newsFailed ? '新聞暫時無法載入，請稍後再試' : undefined },
     }))
@@ -121,19 +112,14 @@ export default function HomePage() {
   }, [safeFetch])
 
   useEffect(() => {
-    fetchData(tab)
-  }, [tab, fetchData])
+    fetchData()
+  }, [fetchData])
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true)
-    await fetchData(tab, true)
+    await fetchData(true)
     setRefreshing(false)
-  }, [tab, fetchData])
-
-  const handleTabChange = (newTab: TabRange) => {
-    setSelectedKeyword(null)
-    setTab(newTab)
-  }
+  }, [fetchData])
 
   const isLoading = Object.values(state.loading).some(Boolean)
   const newsLoading = state.loading.news
@@ -173,29 +159,8 @@ export default function HomePage() {
         <HotList
           tw={state.hotlist.tw}
           loading={state.loading.hotlist}
-          tab={tab}
+          tab="today"
         />
-
-        {/* 議題標籤 */}
-        <section>
-          <h2 className="text-xs font-medium text-[#888888] uppercase tracking-widest mb-3">
-            議題焦點
-          </h2>
-          <KeywordCloud
-            keywords={state.keywords}
-            loading={state.loading.keywords}
-            selectedWord={selectedKeyword}
-            onSelect={setSelectedKeyword}
-          />
-        </section>
-
-        {/* Tab 切換 */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <TabBar active={tab} onChange={handleTabChange} />
-          <span className="text-xs text-[#888888]">
-            {tab === 'today' ? '過去 24 小時' : tab === '3days' ? '過去 3 天' : '過去 7 天'}・每 15 分鐘更新一次
-          </span>
-        </div>
 
         {/* 單欄新聞（台灣 + 國際合併，可用「國際」分類篩選） */}
         <NewsColumn
@@ -205,7 +170,6 @@ export default function HomePage() {
           loading={newsLoading}
           error={state.error.news}
           building={state.building}
-          selectedKeyword={selectedKeyword}
         />
       </main>
 

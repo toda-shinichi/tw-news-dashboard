@@ -10,8 +10,6 @@ interface TabBarProps {
 
 const TABS: { value: TabRange; label: string }[] = [
   { value: 'today', label: '今天' },
-  { value: '3days', label: '三天' },
-  { value: 'week',  label: '本週' },
 ]
 
 export default function TabBar({ active, onChange }: TabBarProps) {

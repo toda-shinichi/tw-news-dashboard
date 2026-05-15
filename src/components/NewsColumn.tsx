@@ -15,7 +15,6 @@ interface NewsColumnProps {
   loading?: boolean
   error?: string
   building?: boolean
-  selectedKeyword?: string | null
 }
 
 type FilterValue = 'all' | 'politics' | 'society' | 'intl' | 'life'
@@ -37,7 +36,6 @@ export default function NewsColumn({
   loading,
   error,
   building,
-  selectedKeyword,
 }: NewsColumnProps) {
   const [selectedCat, setSelectedCat] = useState<FilterValue>('all')
   const [page, setPage] = useState(1)
@@ -49,29 +47,19 @@ export default function NewsColumn({
     if (selectedCat === 'intl') {
       result = result.filter(item => item.column === 'intl')
     } else if (selectedCat === 'politics') {
-      // 政治：僅 tw，不含國際欄
       result = result.filter(item => item.category === 'politics' && item.column === 'tw')
     } else if (selectedCat === 'society') {
-      // 社會：tw 且非政治
       result = result.filter(item => item.category === 'society' && item.column === 'tw')
     } else if (selectedCat === 'life') {
-      // 民生：tw 且非政治、非社會
       result = result.filter(item => LIFE_CATS.has(item.category ?? '') && item.column === 'tw')
     }
-    if (selectedKeyword) {
-      result = result.filter(
-        item =>
-          item.title.includes(selectedKeyword) ||
-          item.summary?.includes(selectedKeyword)
-      )
-    }
     return result
-  }, [items, selectedCat, selectedKeyword])
+  }, [items, selectedCat])
 
   useEffect(() => {
     setPage(1)
     topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [selectedCat, selectedKeyword])
+  }, [selectedCat])
 
   const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE))
   const displayItems = filteredItems.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -108,16 +96,10 @@ export default function NewsColumn({
         </div>
       )}
 
-      {/* Active filter indicator — shows whenever any filter is on */}
-      {(selectedCat !== 'all' || selectedKeyword) && (
-        <div className="text-xs text-[#5B7FA6] bg-[#EBF0F7] rounded-lg px-3 py-1.5 flex items-center gap-1.5 flex-wrap">
-          {selectedCat !== 'all' && (
-            <span>分類：<strong>{CATEGORY_TABS.find(t => t.value === selectedCat)?.label}</strong></span>
-          )}
-          {selectedCat !== 'all' && selectedKeyword && <span className="text-[#5B7FA6]/50">＋</span>}
-          {selectedKeyword && (
-            <span>關鍵字：<strong>{selectedKeyword}</strong></span>
-          )}
+      {/* Active filter indicator */}
+      {selectedCat !== 'all' && (
+        <div className="text-xs text-[#5B7FA6] bg-[#EBF0F7] rounded-lg px-3 py-1.5">
+          分類：<strong>{CATEGORY_TABS.find(t => t.value === selectedCat)?.label}</strong>
         </div>
       )}
 

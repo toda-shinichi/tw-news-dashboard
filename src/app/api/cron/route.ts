@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getAccumulatedNews } from '@/lib/newsStore'
+import { cacheSet } from '@/lib/cache'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
+// Triggered by Vercel Cron every hour (vercel.json: "0 * * * *").
+// Force-refreshes news data and invalidates derived caches so the next
+// user request regenerates summary, hotlist, and news responses fresh.
 export async function GET(req: NextRequest) {
-  // Vercel automatically sets Authorization: Bearer <CRON_SECRET> for cron jobs.
-  // When CRON_SECRET is set, reject any call that doesn't carry it.
   const secret = process.env.CRON_SECRET
   if (secret) {
     const auth = req.headers.get('authorization')
@@ -17,15 +19,25 @@ export async function GET(req: NextRequest) {
 
   const started = Date.now()
 
-  // Force-refresh both columns — bypasses 30-min throttle
-  await Promise.all([
-    getAccumulatedNews('tw',   'month', true),
-    getAccumulatedNews('intl', 'month', true),
+  const [tw, intl] = await Promise.allSettled([
+    getAccumulatedNews('tw',   'today', true),
+    getAccumulatedNews('intl', 'today', true),
+  ])
+
+  // Invalidate derived caches so they regenerate on next user request
+  await Promise.allSettled([
+    cacheSet('news:resp:v2:today:tw',   null, 1),
+    cacheSet('news:resp:v2:today:intl', null, 1),
+    cacheSet('summary:v2:today',        null, 1),
+    cacheSet('keywords:today',          null, 1),
+    cacheSet('hotlist:today',           null, 1),
   ])
 
   return NextResponse.json({
     ok: true,
     durationMs: Date.now() - started,
     updatedAt: new Date().toISOString(),
+    tw:   tw.status   === 'fulfilled' ? tw.value.length   : 'error',
+    intl: intl.status === 'fulfilled' ? intl.value.length : 'error',
   })
 }
