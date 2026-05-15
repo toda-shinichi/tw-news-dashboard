@@ -81,9 +81,6 @@ const RSS_SOURCES: RSSSource[] = [
   { name: '中央社娛樂',  url: 'https://feeds.feedburner.com/rsscna/stars',              column: 'tw', defaultCategory: 'life' },
   { name: '經濟日報',    url: 'https://money.udn.com/rssfeed/news/1001/5588',           column: 'tw', defaultCategory: 'life' },
   { name: 'ETtoday 星光', url: 'https://feeds.feedburner.com/ettoday/star',             column: 'tw', defaultCategory: 'life' },
-  { name: 'iThome',     url: 'https://www.ithome.com.tw/rss',                          column: 'tw', defaultCategory: 'life' },
-  { name: 'TechNews',   url: 'https://technews.tw/tn-rss/',                            column: 'tw', defaultCategory: 'life' },
-  { name: 'Inside',     url: 'https://www.inside.com.tw/feed/rss',                    column: 'tw', defaultCategory: 'life' },
   { name: '新頭殼財經',  url: 'https://newtalk.tw/rss/category/3',                      column: 'tw', defaultCategory: 'life' },
   { name: '新頭殼科技',  url: 'https://newtalk.tw/rss/category/7',                      column: 'tw', defaultCategory: 'life' },
   { name: '新頭殼生活',  url: 'https://newtalk.tw/rss/category/14',                     column: 'tw', defaultCategory: 'life' },
@@ -103,14 +100,6 @@ const RSS_SOURCES: RSSSource[] = [
   { name: '中央社兩岸',  url: 'https://feeds.feedburner.com/rsscna/mainland',           column: 'intl', defaultCategory: 'politics' },
   { name: '新頭殼國際',  url: 'https://newtalk.tw/rss/category/1',                      column: 'intl', defaultCategory: 'politics' },
   { name: '風傳媒國際',  url: STORM(4),                                                  column: 'intl', defaultCategory: 'politics' },
-
-  // ══ 國際：英文 ══════════════════════════════════════
-  { name: 'BBC World',   url: 'http://feeds.bbci.co.uk/news/world/rss.xml',            column: 'intl' },
-  { name: 'CNN Top',     url: 'http://rss.cnn.com/rss/edition.rss',                    column: 'intl' },
-  { name: 'NY Times',    url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml', column: 'intl' },
-  { name: 'The Guardian', url: 'https://www.theguardian.com/world/rss',                column: 'intl' },
-  { name: 'MarketWatch', url: 'https://feeds.content.dowjones.io/public/rss/mw_topstories', column: 'intl', defaultCategory: 'life' },
-  { name: 'Bloomberg',   url: 'https://feeds.bloomberg.com/technology/news.rss',       column: 'intl', defaultCategory: 'life' },
 
   // ══ 國際：Google News ══════════════════════════════
   gnq('Taiwan politics diplomacy security', 'intl', 'Taiwan', undefined, 'en-US', 'US', 'US:en'),

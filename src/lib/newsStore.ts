@@ -1,7 +1,5 @@
 import { cacheGet, cacheSet } from './cache'
 import { fetchAllRSS } from './rss'
-import { fetchNewsAPI } from './newsapi'
-import { fetchGDELT, fetchGDELTTaiwan } from './gdelt'
 import { fetchMediastack } from './mediastack'
 import { fetchGNews } from './gnews'
 import { filterByDateRange, classifyCategory, isChineseText } from './utils'
@@ -13,7 +11,7 @@ const KNOWN_CATS = new Set(['politics', 'society', 'life', 'entertainment', 'fin
 const LIFE_DEDUP_KEY = 'life:dedup:excluded'
 const LIFE_DEDUP_TTL = 3600
 
-const FETCH_INTERVAL_MS = 15 * 60 * 1000   // 15 min: RSS + GDELT
+const FETCH_INTERVAL_MS = 15 * 60 * 1000   // 15 min: RSS
 const EXT_INTERVAL_MS   = 24 * 60 * 60 * 1000 // 24 hr: Mediastack + GNews (quota 保護)
 const MAX_ITEMS = 2000
 const MAX_DAYS  = 1
@@ -52,29 +50,14 @@ async function fetchExternalTW(isBackfill: boolean): Promise<NewsItem[]> {
 }
 
 async function fetchFresh(col: NewsColumn, isBackfill: boolean): Promise<NewsItem[]> {
-  // Backfill: cast a wide net to fill the past 24h from cold start.
-  // Regular: 1d span is enough — mergeStore accumulates across cycles.
-  const gdeltSpan     = isBackfill ? '3d'  : '1d'
-  const gdeltRecords  = isBackfill ? 100   : 50
-  // NewsAPI: on backfill fetch past 24h explicitly; otherwise just latest batch
-  const newsAPIFrom   = isBackfill
-    ? new Date(Date.now() - 26 * 3600_000).toISOString().slice(0, 19) + 'Z'
-    : undefined
-
   if (col === 'tw') {
-    const [rss, api, gdelt, ext] = await Promise.all([
+    const [rss, ext] = await Promise.all([
       fetchAllRSS('tw'),
-      fetchNewsAPI(newsAPIFrom),
-      fetchGDELTTaiwan(gdeltSpan, gdeltRecords),
       fetchExternalTW(isBackfill),
     ])
-    return [...rss, ...api, ...gdelt, ...ext]
+    return [...rss, ...ext]
   } else {
-    const [rss, gdelt] = await Promise.all([
-      fetchAllRSS('intl'),
-      fetchGDELT(gdeltSpan, gdeltRecords),
-    ])
-    return [...rss, ...gdelt]
+    return fetchAllRSS('intl')
   }
 }
 
