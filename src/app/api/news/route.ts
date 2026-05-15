@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   const isPaginated = sp.has('page') || sp.has('limit') || q || cat
 
   // Only use response cache for the default (unpaginated, no search) requests
-  const cacheKey = `news:resp:${tab}:${column}`
+  const cacheKey = `news:resp:v2:${tab}:${column}`
   if (!isPaginated) {
     const cached = await cacheGet<PaginatedNewsResponse>(cacheKey)
     if (cached && !force) return NextResponse.json({ ...cached, fromCache: true })
