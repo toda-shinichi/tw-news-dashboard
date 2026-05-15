@@ -3,13 +3,24 @@ import { Redis } from '@upstash/redis'
 // In-memory fallback when Upstash env vars are not set
 const memCache = new Map<string, { value: unknown; expiresAt: number }>()
 
+function pruneMemCache(): void {
+  const now = Date.now()
+  for (const [key, entry] of memCache) {
+    if (now > entry.expiresAt) memCache.delete(key)
+  }
+}
+
 function getRedis(): Redis | null {
   const url = process.env.UPSTASH_REDIS_REST_URL
   const token = process.env.UPSTASH_REDIS_REST_TOKEN
-  if (!url || !token) return null
+  if (!url || !token) {
+    console.warn('[cache] Redis env vars missing, using memCache')
+    return null
+  }
   try {
     return new Redis({ url, token })
-  } catch {
+  } catch (err) {
+    console.error('[cache] Redis init failed:', err)
     return null
   }
 }
@@ -43,9 +54,11 @@ export async function cacheSet(
     try {
       await redis.set(key, value, { ex: ttlSeconds })
       return
-    } catch {
+    } catch (err) {
+      console.error(`[cache] Redis SET ${key} failed:`, err)
       // fall through to memory
     }
   }
+  if (memCache.size > 200) pruneMemCache()
   memCache.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 })
 }

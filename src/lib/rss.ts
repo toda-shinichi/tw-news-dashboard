@@ -122,12 +122,14 @@ async function fetchOneFeed(source: RSSSource): Promise<NewsItem[]> {
               .replace(/<!\[CDATA\[|\]\]>/g, '')
           ).slice(0, 200) || undefined
 
+        const d = new Date(pubDate)
+        const publishedAt = isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString()
         return {
           id: hashString(title + url),
           title,
           url,
           source: source.name,
-          publishedAt: new Date(pubDate).toISOString(),
+          publishedAt,
           summary,
           column: source.column,
           category: source.defaultCategory,

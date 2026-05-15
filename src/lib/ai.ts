@@ -296,7 +296,8 @@ export async function extractHotList(
       }
     }
     return { topics: [], keywords: [], people: [] }
-  } catch {
+  } catch (err) {
+    console.error('[extractHotList] error:', err)
     return { topics: [], keywords: [], people: [] }
   }
 }

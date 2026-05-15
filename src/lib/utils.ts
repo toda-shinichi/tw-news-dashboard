@@ -44,7 +44,7 @@ export function filterByDateRange<T extends { publishedAt: string }>(
 export function dedupeByTitle<T extends { title: string }>(items: T[]): T[] {
   const seen = new Set<string>()
   return items.filter(item => {
-    const key = item.title.slice(0, 30).toLowerCase()
+    const key = item.title.slice(0, 50).toLowerCase()
     if (seen.has(key)) return false
     seen.add(key)
     return true

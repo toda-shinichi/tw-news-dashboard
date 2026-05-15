@@ -17,10 +17,12 @@ export async function GET(req: NextRequest) {
 
   const cached = await cacheGet<SummaryResponse>(cacheKey)
   // Only serve cache if it has a valid (non-empty, non-error) overview
-  const isValidCache = cached && cached.data?.overview &&
+  const isValidCache = cached &&
+    cached.data?.overview &&
     !cached.data.overview.startsWith('AI 分析') &&
     !cached.data.overview.startsWith('目前無法') &&
-    !cached.data.overview.startsWith('此時段')
+    !cached.data.overview.startsWith('此時段') &&
+    (cached.data.topics?.length ?? 0) > 0
   if (isValidCache && !force) {
     return NextResponse.json({ ...cached, fromCache: true })
   }
@@ -49,7 +51,13 @@ export async function GET(req: NextRequest) {
     fromCache: false,
   }
 
-  const isValid = !!(data.overview && !data.overview.startsWith('AI 分析') && !data.overview.startsWith('目前無法'))
+  const isValid = !!(
+    data.overview &&
+    !data.overview.startsWith('AI 分析') &&
+    !data.overview.startsWith('目前無法') &&
+    !data.overview.startsWith('此時段') &&
+    data.topics.length > 0
+  )
 
   // Only cache successful results (30-min TTL to align with news refresh cycle)
   if (isValid) {

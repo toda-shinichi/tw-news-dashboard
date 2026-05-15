@@ -84,7 +84,6 @@ export async function getAccumulatedNews(
     cacheGet<NewsItem[]>(accKey),
     cacheGet<number>(tsKey),
   ])
-
   const isBackfill = !existing || existing.length === 0
   const needsFetch = !readOnly && (force || isBackfill || !lastFetchAt || Date.now() - lastFetchAt > FETCH_INTERVAL_MS)
   let items: NewsItem[] = existing ?? []
@@ -93,7 +92,7 @@ export async function getAccumulatedNews(
     // Only one concurrent fetch per column
     const isLocked = await cacheGet<boolean>(lockKey)
     if (!isLocked) {
-      await cacheSet(lockKey, true, 90) // 90-second lock TTL
+      await cacheSet(lockKey, true, 120) // 120-second lock TTL
       try {
         const fresh = await fetchFresh(col, isBackfill)
         const categorized = fresh.map(item => ({

@@ -16,7 +16,7 @@ interface HotListProps {
   tab: TabRange
 }
 
-type HotFilter = NewsCategory | 'intl'
+type HotFilter = NewsCategory | 'intl' | 'social'
 
 const CATEGORY_TABS: { value: HotFilter; label: string }[] = [
   { value: 'all',      label: '全部' },
@@ -24,6 +24,7 @@ const CATEGORY_TABS: { value: HotFilter; label: string }[] = [
   { value: 'society',  label: '社會' },
   { value: 'life',     label: '民生' },
   { value: 'intl',     label: '國際' },
+  { value: 'social',   label: 'PTT・Dcard' },
 ]
 
 function RankedList({ items, loading }: { items: string[]; loading?: boolean }) {
@@ -131,13 +132,13 @@ export default function HotList({ tw, loading, tab }: HotListProps) {
           <span className="w-2 h-2 rounded-full bg-[#E8844A]" />
           <span className="text-xs font-medium text-[#E8844A] uppercase tracking-widest">熱門排行</span>
         </div>
-        <div className="flex gap-1 flex-wrap">
+        <div className="flex gap-1 overflow-x-auto pb-0.5 scrollbar-none">
           {CATEGORY_TABS.map(t => (
             <button
               key={t.value}
               onClick={() => setSelectedCat(t.value)}
               className={clsx(
-                'px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors',
+                'px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap flex-shrink-0',
                 selectedCat === t.value
                   ? 'bg-[#E8844A] text-white'
                   : 'bg-[#EFECE5] text-[#555555] hover:text-[#2C2C2C]'

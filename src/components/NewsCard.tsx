@@ -14,8 +14,14 @@ const SENTIMENT_CONFIG: Record<
   neutral: { bg: 'bg-gray-100', text: 'text-gray-500', label: '中性' },
 }
 
+const SOURCE_BADGE: Record<string, { bg: string; text: string }> = {
+  'PTT 八卦板': { bg: 'bg-orange-50', text: 'text-orange-600' },
+  'Dcard':      { bg: 'bg-purple-50', text: 'text-purple-600' },
+}
+
 export default function NewsCard({ item }: NewsCardProps) {
   const { bg, text, label } = SENTIMENT_CONFIG[item.sentiment ?? 'neutral']
+  const sourceBadge = SOURCE_BADGE[item.source]
 
   return (
     <a
@@ -26,7 +32,13 @@ export default function NewsCard({ item }: NewsCardProps) {
     >
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-xs text-[#888888] truncate max-w-[90px]">{item.source}</span>
+          {sourceBadge ? (
+            <span className={`text-xs px-1.5 py-0.5 rounded font-medium flex-shrink-0 ${sourceBadge.bg} ${sourceBadge.text}`}>
+              {item.source}
+            </span>
+          ) : (
+            <span className="text-xs text-[#888888] truncate max-w-[90px]">{item.source}</span>
+          )}
           <span className="text-[#888888]/40 text-xs flex-shrink-0">·</span>
           <span className="text-xs text-[#888888] whitespace-nowrap flex-shrink-0">
             {formatRelativeTime(item.publishedAt)}

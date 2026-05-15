@@ -27,7 +27,7 @@ export default function KeywordCloud({ keywords, loading, selectedWord, onSelect
 
   if (!keywords.length) return null
 
-  const maxCount = Math.max(...keywords.map(k => k.count))
+  const maxCount = Math.max(1, ...keywords.map(k => k.count))
 
   return (
     <div className="flex flex-wrap gap-2">
