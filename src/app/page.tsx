@@ -38,15 +38,10 @@ const INITIAL_STATE: PageState = {
   building: false,
 }
 
-interface Progress {
-  pct: number
-  label: string
-}
-
 export default function HomePage() {
   const [state, setState] = useState<PageState>(INITIAL_STATE)
   const [refreshing, setRefreshing] = useState(false)
-  const [progress, setProgress] = useState<Progress | null>({ pct: 5, label: '正在抓取新聞…' })
+  const [loadingLabel, setLoadingLabel] = useState<string>('正在抓取新聞…')
 
   const safeFetch = useCallback(async (url: string) => {
     try {
@@ -66,7 +61,7 @@ export default function HomePage() {
       error: {},
       building: false,
     }))
-    setProgress({ pct: 10, label: '正在抓取最新新聞…' })
+    setLoadingLabel('正在抓取最新新聞…')
 
     // Fetch tw + intl news in parallel; merge into one list
     const [twData, intlData] = await Promise.all([
@@ -74,7 +69,7 @@ export default function HomePage() {
       safeFetch(`/api/news?tab=today&col=intl${qs}`),
     ])
 
-    setProgress({ pct: 55, label: 'AI 正在分析輿情…' })
+    setLoadingLabel('AI 正在分析輿情中…')
 
     const [summaryData, hotlistData] = await Promise.all([
       safeFetch(`/api/summary?tab=today${qs}`),
@@ -107,8 +102,7 @@ export default function HomePage() {
       building: !newsFailed && allItems.length === 0,
       error: { news: newsFailed ? '新聞暫時無法載入，請稍後再試' : undefined },
     }))
-    setProgress({ pct: 100, label: '載入完成' })
-    setTimeout(() => setProgress(null), 800)
+    setLoadingLabel('正在抓取新聞…')
   }, [safeFetch])
 
   useEffect(() => {
@@ -123,25 +117,33 @@ export default function HomePage() {
 
   const isLoading = Object.values(state.loading).some(Boolean)
   const newsLoading = state.loading.news
+  const isFirstLoad = isLoading && state.allNews.length === 0
 
   return (
     <div className="min-h-screen bg-[#F7F5F0]">
-      {/* Top progress bar */}
-      {(progress || isLoading) && (
-        <div className="fixed top-0 left-0 right-0 z-50 pointer-events-none">
-          <div className="h-[3px] bg-[#E8E4DC]">
-            <div
-              className="h-full bg-[#5B7FA6] transition-all duration-500 ease-out"
-              style={{ width: `${progress?.pct ?? 5}%` }}
-            />
-          </div>
-          {progress && (
-            <div className="flex justify-center mt-1.5">
-              <span className="text-[11px] font-medium text-[#5B7FA6] bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-[#E8E4DC]">
-                {progress.label}
-              </span>
+      {/* First-load overlay — big spinner + patience message */}
+      {isFirstLoad && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#F7F5F0]/85 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl border border-[#E8E4DC] px-10 py-12 flex flex-col items-center gap-6 max-w-sm text-center mx-4">
+            <div className="w-20 h-20 rounded-full border-[5px] border-[#E8E4DC] border-t-[#5B7FA6] animate-spin" />
+            <div className="space-y-2">
+              <p className="text-base font-semibold text-[#2C2C2C]">{loadingLabel}</p>
+              <p className="text-sm text-[#888888] leading-relaxed">
+                需從各媒體抓取新聞並進行 AI 輿情分析<br />
+                約需 <strong className="text-[#5B7FA6]">30–60 秒</strong>，請耐心等候
+              </p>
             </div>
-          )}
+          </div>
+        </div>
+      )}
+
+      {/* Refresh toast — shown when manually refreshing with existing data */}
+      {refreshing && !isFirstLoad && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+          <div className="bg-white rounded-full shadow-lg border border-[#E8E4DC] px-4 py-2 flex items-center gap-2.5">
+            <div className="w-4 h-4 rounded-full border-2 border-[#E8E4DC] border-t-[#5B7FA6] animate-spin flex-shrink-0" />
+            <span className="text-xs font-medium text-[#5B7FA6]">更新中，請稍候…</span>
+          </div>
         </div>
       )}
 
