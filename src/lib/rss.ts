@@ -46,6 +46,14 @@ const RSS_SOURCES: RSSSource[] = [
   gnq('site:news.tvbs.com.tw', 'tw', 'TVBS'),
   gnq('site:chinatimes.com', 'tw', '中時'),
 
+  // Yahoo 奇摩新聞（international/twoshore/leisure/relaxation 403 封鎖，僅納入可用項目）
+  { name: 'Yahoo政治',    url: 'http://tw.news.yahoo.com/rss/politics',                 column: 'tw', defaultCategory: 'politics' },
+  { name: 'Yahoo社會',    url: 'http://tw.news.yahoo.com/rss/society',                  column: 'tw', defaultCategory: 'society' },
+  { name: 'Yahoo財經',    url: 'http://tw.news.yahoo.com/rss/finance',                  column: 'tw', defaultCategory: 'life' },
+  { name: 'Yahoo影視',    url: 'http://tw.news.yahoo.com/rss/entertainment',             column: 'tw', defaultCategory: 'life' },
+  { name: 'Yahoo體育',    url: 'http://tw.news.yahoo.com/rss/sports',                   column: 'tw', defaultCategory: 'life' },
+  { name: 'Yahoo科技',    url: 'http://tw.news.yahoo.com/rss/technology',               column: 'tw', defaultCategory: 'life' },
+
   // ══ 台灣：政治 ══════════════════════════════════════
   { name: '自由時報政治', url: 'https://news.ltn.com.tw/rss/politics.xml',              column: 'tw', defaultCategory: 'politics' },
   { name: '自由時報評論', url: 'https://news.ltn.com.tw/rss/opinion.xml',               column: 'tw', defaultCategory: 'politics' },
