@@ -6,6 +6,99 @@ import { NewsItem } from '@/types'
 import NewsCard from './NewsCard'
 import LoadingState from './LoadingState'
 
+function Pagination({
+  page,
+  totalPages,
+  total,
+  onChange,
+}: {
+  page: number
+  totalPages: number
+  total: number
+  onChange: (p: number) => void
+}) {
+  const [jumpVal, setJumpVal] = useState('')
+
+  function handleJump(e: React.FormEvent) {
+    e.preventDefault()
+    const n = parseInt(jumpVal)
+    if (!isNaN(n) && n >= 1 && n <= totalPages) onChange(n)
+    setJumpVal('')
+  }
+
+  // Build page number list with ellipsis
+  function pageNumbers(): (number | '…')[] {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const pages: (number | '…')[] = []
+    const addPage = (n: number) => { if (!pages.includes(n)) pages.push(n) }
+    addPage(1)
+    if (page > 3) pages.push('…')
+    for (let i = Math.max(2, page - 2); i <= Math.min(totalPages - 1, page + 2); i++) addPage(i)
+    if (page < totalPages - 2) pages.push('…')
+    addPage(totalPages)
+    return pages
+  }
+
+  const btnBase = 'min-w-[32px] h-8 px-1.5 rounded-md text-xs font-medium transition-colors'
+
+  return (
+    <div className="flex flex-col items-center gap-2 pt-2">
+      <div className="flex items-center gap-1 flex-wrap justify-center">
+        {/* Prev */}
+        <button
+          onClick={() => onChange(page - 1)}
+          disabled={page <= 1}
+          className={clsx(btnBase, 'px-2.5 border border-[#E8E4DC] text-[#5B7FA6] hover:bg-[#EBF0F7] disabled:opacity-30 disabled:cursor-not-allowed')}
+        >←</button>
+
+        {/* Page numbers */}
+        {pageNumbers().map((n, i) =>
+          n === '…'
+            ? <span key={`e${i}`} className="text-xs text-[#AAAAAA] px-0.5">…</span>
+            : <button
+                key={n}
+                onClick={() => onChange(n as number)}
+                className={clsx(btnBase, n === page
+                  ? 'bg-[#5B7FA6] text-white'
+                  : 'border border-[#E8E4DC] text-[#555555] hover:bg-[#EBF0F7]'
+                )}
+              >{n}</button>
+        )}
+
+        {/* Next */}
+        <button
+          onClick={() => onChange(page + 1)}
+          disabled={page >= totalPages}
+          className={clsx(btnBase, 'px-2.5 border border-[#E8E4DC] text-[#5B7FA6] hover:bg-[#EBF0F7] disabled:opacity-30 disabled:cursor-not-allowed')}
+        >→</button>
+      </div>
+
+      {/* Jump + total count */}
+      <div className="flex items-center gap-2 text-xs text-[#888888]">
+        <span>共 {total} 則・第 {page}/{totalPages} 頁</span>
+        {totalPages > 5 && (
+          <form onSubmit={handleJump} className="flex items-center gap-1">
+            <span>跳至</span>
+            <input
+              type="number"
+              min={1}
+              max={totalPages}
+              value={jumpVal}
+              onChange={e => setJumpVal(e.target.value)}
+              className="w-12 h-6 px-1.5 text-xs border border-[#E8E4DC] rounded-md text-center focus:outline-none focus:border-[#5B7FA6]"
+              placeholder="頁"
+            />
+            <button
+              type="submit"
+              className="h-6 px-2 text-xs border border-[#E8E4DC] rounded-md text-[#5B7FA6] hover:bg-[#EBF0F7] transition-colors"
+            >Go</button>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
+
 const PAGE_SIZE = 30
 
 interface NewsColumnProps {
@@ -137,25 +230,12 @@ export default function NewsColumn({
       ))}
 
       {!error && filteredItems.length > PAGE_SIZE && (
-        <div className="flex items-center justify-between pt-1">
-          <button
-            onClick={() => changePage(Math.max(1, page - 1))}
-            disabled={page <= 1}
-            className="px-3 py-1.5 text-xs text-[#5B7FA6] border border-[#E8E4DC] rounded-lg hover:bg-[#EBF0F7] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            ← 上一頁
-          </button>
-          <span className="text-xs text-[#888888]">
-            第 {page} / {totalPages} 頁・共 {filteredItems.length} 則
-          </span>
-          <button
-            onClick={() => changePage(Math.min(totalPages, page + 1))}
-            disabled={page >= totalPages}
-            className="px-3 py-1.5 text-xs text-[#5B7FA6] border border-[#E8E4DC] rounded-lg hover:bg-[#EBF0F7] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            下一頁 →
-          </button>
-        </div>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          total={filteredItems.length}
+          onChange={changePage}
+        />
       )}
     </div>
   )
