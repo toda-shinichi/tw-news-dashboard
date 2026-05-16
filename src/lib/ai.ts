@@ -28,19 +28,22 @@ export async function analyzeSentiment(
 
   const client = getClient()
   const BATCH_SIZE = 20
-  const result: Record<string, SentimentLabel> = {}
+  const MAX_CONCURRENT = 10
+  const result: Record<string, SentimentLabel> = { ...fallback }
 
+  const batches: NewsItem[][] = []
   for (let i = 0; i < items.length; i += BATCH_SIZE) {
-    const batch = items.slice(i, i + BATCH_SIZE)
+    batches.push(items.slice(i, i + BATCH_SIZE))
+  }
+
+  async function analyzeBatch(batch: NewsItem[]): Promise<void> {
     const userContent = batch
       .map((item, idx) => `${idx + 1}. [${item.id}] ${item.title}`)
       .join('\n')
-
     try {
       const resp = await client.chat.completions.create({
         model: MODEL_FAST,
         messages: [
-          // few-shot example to enforce JSON output
           {
             role: 'user',
             content:
@@ -59,13 +62,10 @@ export async function analyzeSentiment(
         temperature: 0,
         max_tokens: 800,
       })
-
       const text = resp.choices[0]?.message?.content?.trim() || '[]'
       const jsonMatch = text.match(/\[[\s\S]*\]/)
       if (jsonMatch) {
-        const parsed: Array<{ id: string; sentiment: SentimentLabel }> = JSON.parse(
-          jsonMatch[0]
-        )
+        const parsed: Array<{ id: string; sentiment: SentimentLabel }> = JSON.parse(jsonMatch[0])
         for (const entry of parsed) {
           if (['positive', 'negative', 'neutral'].includes(entry.sentiment)) {
             result[entry.id] = entry.sentiment
@@ -77,9 +77,11 @@ export async function analyzeSentiment(
     }
   }
 
-  for (const item of items) {
-    if (!result[item.id]) result[item.id] = 'neutral'
+  // Process in parallel chunks (MAX_CONCURRENT at a time)
+  for (let i = 0; i < batches.length; i += MAX_CONCURRENT) {
+    await Promise.allSettled(batches.slice(i, i + MAX_CONCURRENT).map(analyzeBatch))
   }
+
   return result
 }
 
@@ -349,13 +351,18 @@ export async function dedupeLifeNewsAI(items: NewsItem[]): Promise<Set<string>> 
   if (!process.env.CPA_API_KEY || items.length === 0) return new Set()
 
   const client = getClient()
-  const excluded = new Set<string>()
   const BATCH = 80
+  const MAX_CONCURRENT = 4
 
+  const batches: NewsItem[][] = []
   for (let i = 0; i < items.length; i += BATCH) {
-    const batch = items.slice(i, i + BATCH)
-    const numbered = batch.map((item, idx) => `${idx + 1}. [${item.id}] ${item.title}`).join('\n')
+    batches.push(items.slice(i, i + BATCH))
+  }
 
+  const allExcluded: string[] = []
+
+  async function dedupeBatch(batch: NewsItem[]) {
+    const numbered = batch.map((item, idx) => `${idx + 1}. [${item.id}] ${item.title}`).join('\n')
     try {
       const resp = await client.chat.completions.create({
         model: MODEL_FAST,
@@ -370,14 +377,13 @@ export async function dedupeLifeNewsAI(items: NewsItem[]): Promise<Set<string>> 
         temperature: 0,
         max_tokens: 500,
       })
-
       const text = resp.choices[0]?.message?.content?.trim() || '[]'
       const jsonMatch = text.match(/\[[\s\S]*?\]/)
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0])
         if (Array.isArray(parsed)) {
           for (const id of parsed) {
-            if (typeof id === 'string') excluded.add(id)
+            if (typeof id === 'string') allExcluded.push(id)
           }
         }
       }
@@ -386,5 +392,9 @@ export async function dedupeLifeNewsAI(items: NewsItem[]): Promise<Set<string>> 
     }
   }
 
-  return excluded
+  for (let i = 0; i < batches.length; i += MAX_CONCURRENT) {
+    await Promise.allSettled(batches.slice(i, i + MAX_CONCURRENT).map(dedupeBatch))
+  }
+
+  return new Set(allExcluded)
 }

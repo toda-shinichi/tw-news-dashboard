@@ -1,18 +1,50 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { analyzeSentiment } from '@/lib/ai'
 import { cacheGet, cacheSet } from '@/lib/cache'
 import { dedupeByTitle, isChineseText } from '@/lib/utils'
 import { getAccumulatedNews } from '@/lib/newsStore'
-import { TabRange, NewsColumn, NewsResponse } from '@/types'
+import { TabRange, NewsColumn, NewsResponse, SentimentLabel, NewsItem } from '@/types'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
+
+const SENTIMENT_KEY = 'sentiment:v1'
+const SENTIMENT_TTL = 90_000 // matches news acc TTL (~25h)
+// Max items to analyze synchronously per request; remaining done in background
+const SENTIMENT_SYNC_LIMIT = 300
 
 export interface PaginatedNewsResponse extends NewsResponse {
   total: number
   page: number
   limit: number
   totalPages: number
+}
+
+async function getAndUpdateSentiment(items: NewsItem[]): Promise<Record<string, SentimentLabel>> {
+  const cached = await cacheGet<Record<string, SentimentLabel>>(SENTIMENT_KEY) ?? {}
+
+  // Only analyze items not yet in the persistent cache
+  const uncached = items.filter(item => !cached[item.id])
+
+  if (uncached.length === 0) return cached
+
+  const syncBatch = uncached.slice(0, SENTIMENT_SYNC_LIMIT)
+  const asyncBatch = uncached.slice(SENTIMENT_SYNC_LIMIT)
+
+  const newSentiment = await analyzeSentiment(syncBatch)
+  const merged = { ...cached, ...newSentiment }
+
+  if (asyncBatch.length > 0) {
+    // Analyze remaining items after response is sent
+    after(async () => {
+      const moreSentiment = await analyzeSentiment(asyncBatch)
+      const latest = await cacheGet<Record<string, SentimentLabel>>(SENTIMENT_KEY) ?? {}
+      await cacheSet(SENTIMENT_KEY, { ...latest, ...moreSentiment }, SENTIMENT_TTL)
+    })
+  }
+
+  await cacheSet(SENTIMENT_KEY, merged, SENTIMENT_TTL)
+  return merged
 }
 
 export async function GET(req: NextRequest) {
@@ -28,7 +60,7 @@ export async function GET(req: NextRequest) {
   const isPaginated = sp.has('page') || sp.has('limit') || q || cat
 
   // Only use response cache for the default (unpaginated, no search) requests
-  const cacheKey = `news:resp:v2:${tab}:${column}`
+  const cacheKey = `news:resp:v3:${tab}:${column}`
   if (!isPaginated) {
     const cached = await cacheGet<PaginatedNewsResponse>(cacheKey)
     if (cached && !force) return NextResponse.json({ ...cached, fromCache: true })
@@ -61,7 +93,8 @@ export async function GET(req: NextRequest) {
   const totalPages = Math.ceil(total / limit)
   const pageItems  = items.slice((page - 1) * limit, page * limit)
 
-  const sentimentMap = await analyzeSentiment(pageItems)
+  // Use persistent sentiment cache — only newly seen items are analyzed
+  const sentimentMap = await getAndUpdateSentiment(pageItems)
   const withSentiment = pageItems.map(item => ({
     ...item,
     sentiment: sentimentMap[item.id] ?? 'neutral',
