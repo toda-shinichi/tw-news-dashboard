@@ -31,7 +31,6 @@ const STORM = (id: number) =>
 const RSS_SOURCES: RSSSource[] = [
   // ══ 台灣：綜合（無分類，讓 classifier 處理）══════════════
   { name: '自由時報',    url: 'https://news.ltn.com.tw/rss/all.xml',                    column: 'tw' },
-  { name: '聯合新聞網',  url: 'https://udn.com/rssfeed/news/2/0?ch=news',               column: 'tw' },
   { name: 'ETtoday',    url: 'https://feeds.feedburner.com/ettoday/realtime',            column: 'tw' },
   { name: '新頭殼',     url: 'https://newtalk.tw/rss/all/',                              column: 'tw' },
   { name: '公視新聞',   url: 'https://about.pts.org.tw/rss/XML/newsfeed.xml',            column: 'tw' },
@@ -42,12 +41,15 @@ const RSS_SOURCES: RSSSource[] = [
   gnq('台灣社會 民生 生活 天氣', 'tw', 'TW社生'),
   gnq('台灣財經 台股 投資 房市', 'tw', 'TW財經'),
   gnq('台灣科技 半導體 台積電 AI', 'tw', 'TW科技'),
+  // Google News 媒體補充（UDN RSS 已失效；TVBS/中時無 RSS）
+  gnq('site:udn.com', 'tw', 'UDN'),
+  gnq('site:news.tvbs.com.tw', 'tw', 'TVBS'),
+  gnq('site:chinatimes.com', 'tw', '中時'),
 
   // ══ 台灣：政治 ══════════════════════════════════════
   { name: '自由時報政治', url: 'https://news.ltn.com.tw/rss/politics.xml',              column: 'tw', defaultCategory: 'politics' },
   { name: '自由時報評論', url: 'https://news.ltn.com.tw/rss/opinion.xml',               column: 'tw', defaultCategory: 'politics' },
   { name: '自由時報軍武', url: 'https://news.ltn.com.tw/rss/def.xml',                   column: 'tw', defaultCategory: 'politics' },
-  { name: '聯合政治',    url: 'https://udn.com/rssfeed/news/2/6638?ch=news',            column: 'tw', defaultCategory: 'politics' },
   { name: '中央社政治',  url: 'https://feeds.feedburner.com/rsscna/politics',           column: 'tw', defaultCategory: 'politics' },
   { name: '新頭殼政治',  url: 'https://newtalk.tw/rss/category/2',                      column: 'tw', defaultCategory: 'politics' },
   { name: '風傳媒政治',  url: STORM(2),                                                  column: 'tw', defaultCategory: 'politics' },
@@ -58,7 +60,6 @@ const RSS_SOURCES: RSSSource[] = [
   // ══ 台灣：社會 ══════════════════════════════════════
   { name: '自由時報社會', url: 'https://news.ltn.com.tw/rss/society.xml',               column: 'tw', defaultCategory: 'society' },
   { name: '自由時報地方', url: 'https://news.ltn.com.tw/rss/local.xml',                 column: 'tw', defaultCategory: 'society' },
-  { name: '聯合社會',    url: 'https://udn.com/rssfeed/news/2/6639?ch=news',            column: 'tw', defaultCategory: 'society' },
   { name: '中央社社會',  url: 'https://feeds.feedburner.com/rsscna/social',             column: 'tw', defaultCategory: 'society' },
   { name: '中央社生活',  url: 'https://feeds.feedburner.com/rsscna/lifehealth',         column: 'tw', defaultCategory: 'society' },
   { name: '中央社地方',  url: 'https://feeds.feedburner.com/rsscna/local',              column: 'tw', defaultCategory: 'society' },
@@ -73,13 +74,12 @@ const RSS_SOURCES: RSSSource[] = [
   { name: '自由時報財經', url: 'https://news.ltn.com.tw/rss/business.xml',              column: 'tw', defaultCategory: 'life' },
   { name: '自由時報生活', url: 'https://news.ltn.com.tw/rss/life.xml',                  column: 'tw', defaultCategory: 'life' },
   { name: '自由時報娛樂', url: 'https://news.ltn.com.tw/rss/entertainment.xml',         column: 'tw', defaultCategory: 'life' },
-  { name: '聯合財經',    url: 'https://udn.com/rssfeed/news/2/6644?ch=news',            column: 'tw', defaultCategory: 'life' },
-  { name: '聯合數位',    url: 'https://udn.com/rssfeed/news/2/7226?ch=news',            column: 'tw', defaultCategory: 'life' },
   { name: '中央社財經',  url: 'https://feeds.feedburner.com/rsscna/finance',            column: 'tw', defaultCategory: 'life' },
   { name: '中央社科技',  url: 'https://feeds.feedburner.com/rsscna/technology',         column: 'tw', defaultCategory: 'life' },
   { name: '中央社文化',  url: 'https://feeds.feedburner.com/rsscna/culture',            column: 'tw', defaultCategory: 'life' },
   { name: '中央社娛樂',  url: 'https://feeds.feedburner.com/rsscna/stars',              column: 'tw', defaultCategory: 'life' },
-  { name: '經濟日報',    url: 'https://money.udn.com/rssfeed/news/1001/5588',           column: 'tw', defaultCategory: 'life' },
+  // 經濟日報：移除 defaultCategory，讓 classifier 區分台灣財經 vs 國際財經
+  { name: '經濟日報',    url: 'https://money.udn.com/rssfeed/news/1001/5588',           column: 'tw' },
   { name: 'ETtoday 星光', url: 'https://feeds.feedburner.com/ettoday/star',             column: 'tw', defaultCategory: 'life' },
   { name: '新頭殼財經',  url: 'https://newtalk.tw/rss/category/3',                      column: 'tw', defaultCategory: 'life' },
   { name: '新頭殼科技',  url: 'https://newtalk.tw/rss/category/7',                      column: 'tw', defaultCategory: 'life' },
@@ -95,11 +95,12 @@ const RSS_SOURCES: RSSSource[] = [
 
   // ══ 國際：中文 ══════════════════════════════════════
   { name: '自由時報國際', url: 'https://news.ltn.com.tw/rss/world.xml',                 column: 'intl', defaultCategory: 'politics' },
-  { name: '聯合全球',    url: 'https://udn.com/rssfeed/news/2/7225?ch=news',            column: 'intl', defaultCategory: 'politics' },
   { name: '中央社國際',  url: 'https://feeds.feedburner.com/rsscna/intworld',           column: 'intl', defaultCategory: 'politics' },
   { name: '中央社兩岸',  url: 'https://feeds.feedburner.com/rsscna/mainland',           column: 'intl', defaultCategory: 'politics' },
   { name: '新頭殼國際',  url: 'https://newtalk.tw/rss/category/1',                      column: 'intl', defaultCategory: 'politics' },
   { name: '風傳媒國際',  url: STORM(4),                                                  column: 'intl', defaultCategory: 'politics' },
+  // UDN 國際改走 Google News（RSS 已失效）
+  gnq('site:udn.com 國際 全球', 'intl', 'UDN國際', 'politics'),
 
   // ══ 國際：Google News ══════════════════════════════
   gnq('Taiwan politics diplomacy security', 'intl', 'Taiwan', undefined, 'en-US', 'US', 'US:en'),
