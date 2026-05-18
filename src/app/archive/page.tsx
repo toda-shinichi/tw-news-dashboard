@@ -8,10 +8,10 @@ import { NewsItem, TabRange } from '@/types'
 import { HistorySnapshot } from '@/lib/history'
 
 const TAB_OPTIONS: { value: TabRange; label: string }[] = [
-  { value: 'today',  label: '24 小時' },
-  { value: '3days',  label: '3 天'   },
-  { value: 'week',   label: '本週'   },
-  { value: 'month',  label: '30 天'  },
+  { value: 'today', label: '24 小時' },
+  { value: '3days', label: '3 天'   },
+  { value: 'week',  label: '本週'   },
+  { value: 'month', label: '30 天'  },
 ]
 
 const COL_OPTIONS = [
@@ -26,7 +26,20 @@ const CAT_OPTIONS = [
   { value: 'life',     label: '民生' },
 ]
 
-const NEWS_LIMIT = 50
+const SOURCE_OPTIONS = [
+  { value: '', label: '所有媒體' },
+  { value: '自由時報', label: '自由時報' },
+  { value: 'ETtoday',  label: 'ETtoday'  },
+  { value: '新頭殼',   label: '新頭殼'   },
+  { value: '公視',     label: '公視新聞'  },
+  { value: '中央社',   label: '中央社'   },
+  { value: '經濟日報', label: '經濟日報' },
+  { value: '風傳媒',   label: '風傳媒'   },
+  { value: 'Yahoo',    label: 'Yahoo 奇摩'},
+  { value: 'Google News', label: 'Google News' },
+]
+
+const PAGE_SIZE = 30
 
 function sentimentDot(s?: string) {
   if (s === 'positive') return 'bg-green-400'
@@ -35,17 +48,80 @@ function sentimentDot(s?: string) {
 }
 
 function formatDate(iso: string) {
-  const d = new Date(iso)
-  return d.toLocaleString('zh-TW', {
+  return new Date(iso).toLocaleString('zh-TW', {
     timeZone: 'Asia/Taipei',
     month: 'numeric', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
   })
 }
 
-// ─── History tab ────────────────────────────────────────────────────────────
+// ─── Pagination ──────────────────────────────────────────────────────────────
+
+function Pagination({ page, totalPages, onChange }: {
+  page: number; totalPages: number; onChange: (p: number) => void
+}) {
+  const [jumpVal, setJumpVal] = useState('')
+
+  function handleJump(e: React.FormEvent) {
+    e.preventDefault()
+    const n = parseInt(jumpVal)
+    if (!isNaN(n) && n >= 1 && n <= totalPages) onChange(n)
+    setJumpVal('')
+  }
+
+  function pageNumbers(): (number | '…')[] {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const pages: (number | '…')[] = []
+    const add = (n: number) => { if (!pages.includes(n)) pages.push(n) }
+    add(1)
+    if (page > 3) pages.push('…')
+    for (let i = Math.max(2, page - 2); i <= Math.min(totalPages - 1, page + 2); i++) add(i)
+    if (page < totalPages - 2) pages.push('…')
+    add(totalPages)
+    return pages
+  }
+
+  const btn = 'min-w-[32px] h-8 px-1.5 rounded-md text-xs font-medium transition-colors'
+
+  return (
+    <div className="flex flex-col items-center gap-2 py-4">
+      <div className="flex items-center gap-1 flex-wrap justify-center">
+        <button onClick={() => onChange(page - 1)} disabled={page <= 1}
+          className={clsx(btn, 'px-2.5 border border-[#E8E4DC] text-[#5B7FA6] hover:bg-[#EBF0F7] disabled:opacity-30 disabled:cursor-not-allowed')}>←</button>
+        {pageNumbers().map((n, i) =>
+          n === '…'
+            ? <span key={`e${i}`} className="text-xs text-[#AAAAAA] px-0.5">…</span>
+            : <button key={n} onClick={() => onChange(n as number)}
+                className={clsx(btn, n === page
+                  ? 'bg-[#5B7FA6] text-white'
+                  : 'border border-[#E8E4DC] text-[#555555] hover:bg-[#EBF0F7]')}>
+                {n}
+              </button>
+        )}
+        <button onClick={() => onChange(page + 1)} disabled={page >= totalPages}
+          className={clsx(btn, 'px-2.5 border border-[#E8E4DC] text-[#5B7FA6] hover:bg-[#EBF0F7] disabled:opacity-30 disabled:cursor-not-allowed')}>→</button>
+      </div>
+      {totalPages > 5 && (
+        <form onSubmit={handleJump} className="flex items-center gap-1.5 text-xs text-[#888888]">
+          <span>跳至</span>
+          <input type="number" min={1} max={totalPages} value={jumpVal}
+            onChange={e => setJumpVal(e.target.value)}
+            className="w-14 h-7 px-2 text-xs border border-[#E8E4DC] rounded-md text-center focus:outline-none focus:border-[#5B7FA6]"
+            placeholder="頁碼" />
+          <button type="submit"
+            className="h-7 px-2.5 text-xs border border-[#E8E4DC] rounded-md text-[#5B7FA6] hover:bg-[#EBF0F7] transition-colors">Go</button>
+        </form>
+      )}
+    </div>
+  )
+}
+
+// ─── AI History panel ────────────────────────────────────────────────────────
 
 interface HistoryEntry { ts: number; generatedAt: string; tab: string }
+const TAB_LABELS: Record<string, string> = {
+  today: '24 小時', '3days': '3 天', week: '本週', month: '30 天',
+}
 
 function HistoryPanel() {
   const [entries, setEntries] = useState<HistoryEntry[]>([])
@@ -54,168 +130,50 @@ function HistoryPanel() {
   const [loadingSnap, setLoadingSnap] = useState(false)
 
   useEffect(() => {
-    fetch('/api/history')
-      .then(r => r.json())
-      .then(d => setEntries(d.entries ?? []))
-      .catch(() => {})
-      .finally(() => setLoading(false))
+    fetch('/api/history').then(r => r.json()).then(d => setEntries(d.entries ?? [])).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
   const loadSnapshot = async (ts: number) => {
     setLoadingSnap(true)
-    try {
-      const r = await fetch(`/api/history?ts=${ts}`)
-      if (r.ok) setSelected(await r.json())
-    } finally {
-      setLoadingSnap(false)
-    }
+    try { const r = await fetch(`/api/history?ts=${ts}`); if (r.ok) setSelected(await r.json()) }
+    finally { setLoadingSnap(false) }
   }
 
-  if (loading) {
-    return (
-      <div className="space-y-2">
-        {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-14 bg-white border border-[#E8E4DC] rounded-lg animate-pulse" />
-        ))}
-      </div>
-    )
-  }
-
-  if (entries.length === 0) {
-    return (
-      <div className="text-center py-16 text-sm text-[#888888]">
-        尚無歷史分析紀錄。每次 AI 重新分析後，資料會自動記錄在這裡。
-      </div>
-    )
-  }
-
-  const TAB_LABELS: Record<string, string> = {
-    today: '24 小時', '3days': '3 天', week: '本週', month: '30 天',
-  }
+  if (loading) return <div className="space-y-2">{[...Array(6)].map((_, i) => <div key={i} className="h-14 bg-white border border-[#E8E4DC] rounded-lg animate-pulse" />)}</div>
+  if (entries.length === 0) return <div className="text-center py-16 text-sm text-[#888888]">尚無歷史分析紀錄。每次 AI 重新分析後，資料會自動記錄在這裡。</div>
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {/* Entry list */}
       <div className="space-y-1.5">
         {entries.map(e => (
-          <button
-            key={e.ts}
-            onClick={() => loadSnapshot(e.ts)}
-            className={clsx(
-              'w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors',
-              selected && 'ts' in selected && (selected as HistorySnapshot & { _ts?: number })._ts === e.ts
+          <button key={e.ts} onClick={() => loadSnapshot(e.ts)}
+            className={clsx('w-full text-left px-3 py-2.5 rounded-lg border text-sm transition-colors',
+              selected && (selected as HistorySnapshot & { _ts?: number })._ts === e.ts
                 ? 'border-[#5B7FA6] bg-[#EBF0F7] text-[#3D5A7A]'
-                : 'border-[#E8E4DC] bg-white hover:border-[#5B7FA6]/40 hover:bg-[#F7F9FC]'
-            )}
-          >
+                : 'border-[#E8E4DC] bg-white hover:border-[#5B7FA6]/40 hover:bg-[#F7F9FC]')}>
             <div className="font-medium text-[#2C2C2C]">{formatDate(e.generatedAt)}</div>
-            <div className="text-[11px] text-[#888888] mt-0.5">
-              {TAB_LABELS[e.tab] ?? e.tab} 時段分析
-            </div>
+            <div className="text-[11px] text-[#888888] mt-0.5">{TAB_LABELS[e.tab] ?? e.tab} 時段分析</div>
           </button>
         ))}
       </div>
-
-      {/* Snapshot detail */}
       <div className="md:col-span-2">
-        {loadingSnap && (
-          <div className="h-40 bg-white border border-[#E8E4DC] rounded-xl animate-pulse" />
-        )}
-        {!loadingSnap && !selected && (
-          <div className="flex items-center justify-center h-40 text-sm text-[#AAAAAA] border border-dashed border-[#E8E4DC] rounded-xl">
-            ← 選取左側紀錄以查看詳情
-          </div>
-        )}
+        {loadingSnap && <div className="h-40 bg-white border border-[#E8E4DC] rounded-xl animate-pulse" />}
+        {!loadingSnap && !selected && <div className="flex items-center justify-center h-40 text-sm text-[#AAAAAA] border border-dashed border-[#E8E4DC] rounded-xl">← 選取左側紀錄以查看詳情</div>}
         {!loadingSnap && selected && (
           <div className="bg-white border border-[#E8E4DC] rounded-xl p-5 space-y-4">
-            <p className="text-xs text-[#888888]">
-              分析時間：{formatDate(selected.generatedAt)}
-              　時段：{TAB_LABELS[selected.tab] ?? selected.tab}
-            </p>
-
-            {selected.summary?.overview && (
-              <div>
-                <p className="text-xs font-semibold text-[#5B7FA6] mb-1">整體輿情</p>
-                <p className="text-sm text-[#2C2C2C] leading-relaxed">{selected.summary.overview}</p>
-              </div>
-            )}
-
+            <p className="text-xs text-[#888888]">分析時間：{formatDate(selected.generatedAt)}　時段：{TAB_LABELS[selected.tab] ?? selected.tab}</p>
+            {selected.summary?.overview && <div><p className="text-xs font-semibold text-[#5B7FA6] mb-1">整體輿情</p><p className="text-sm text-[#2C2C2C] leading-relaxed">{selected.summary.overview}</p></div>}
             {selected.summary?.topics && selected.summary.topics.length > 0 && (
               <div>
                 <p className="text-xs font-semibold text-[#5B7FA6] mb-1.5">五大議題</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {selected.summary.topics.map((t, i) => (
-                    <span key={i} className="text-xs px-2 py-0.5 bg-[#EBF0F7] text-[#3D5A7A] rounded-full">{t}</span>
-                  ))}
-                </div>
+                <div className="flex flex-wrap gap-1.5">{selected.summary.topics.map((t, i) => <span key={i} className="text-xs px-2 py-0.5 bg-[#EBF0F7] text-[#3D5A7A] rounded-full">{t}</span>)}</div>
               </div>
             )}
-
-            {/* dynamics (new) or fallback to brewing+upcoming (legacy) */}
             {(() => {
-              const items = selected.summary?.dynamics?.length
-                ? selected.summary.dynamics
-                : [...(selected.summary?.brewing ?? []), ...(selected.summary?.upcoming ?? [])]
+              const items = selected.summary?.dynamics?.length ? selected.summary.dynamics : [...(selected.summary?.brewing ?? []), ...(selected.summary?.upcoming ?? [])]
               if (!items.length) return null
-              return (
-                <div>
-                  <p className="text-xs font-semibold text-[#D4874A] mb-1.5">動向 & 升溫預測</p>
-                  <ul className="space-y-1">
-                    {items.map((a, i) => (
-                      <li key={i} className="text-sm text-[#2C2C2C] flex gap-2">
-                        <span className="text-[#D4874A] flex-shrink-0">→</span>
-                        {a}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )
+              return <div><p className="text-xs font-semibold text-[#D4874A] mb-1.5">動向 & 升溫預測</p><ul className="space-y-1">{items.map((a, i) => <li key={i} className="text-sm text-[#2C2C2C] flex gap-2"><span className="text-[#D4874A] flex-shrink-0">→</span>{a}</li>)}</ul></div>
             })()}
-
-            {/* watchlist (new) or fallback to longterm+alerts (legacy) */}
-            {(() => {
-              const items = selected.summary?.watchlist?.length
-                ? selected.summary.watchlist
-                : [...(selected.summary?.longterm ?? []), ...(selected.summary?.alerts ?? [])]
-              if (!items.length) return null
-              return (
-                <div>
-                  <p className="text-xs font-semibold text-[#7A62A8] mb-1.5">長期觀察 & 警示</p>
-                  <ul className="space-y-1">
-                    {items.map((a, i) => (
-                      <li key={i} className="text-sm text-[#2C2C2C] flex gap-2">
-                        <span className="text-[#7A62A8] flex-shrink-0">▲</span>
-                        {a}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )
-            })()}
-
-            {(selected.hotlist?.tw?.topics?.length > 0 || selected.hotlist?.intl?.topics?.length > 0) && (
-              <div className="grid grid-cols-2 gap-4 pt-1 border-t border-[#F0EDE6]">
-                {(['tw', 'intl'] as const).map(col => {
-                  const hl = selected.hotlist[col]
-                  if (!hl?.topics?.length) return null
-                  return (
-                    <div key={col}>
-                      <p className="text-xs font-semibold text-[#5B7FA6] mb-1.5">
-                        {col === 'tw' ? '台灣熱門議題' : '國際熱門議題'}
-                      </p>
-                      <ol className="space-y-0.5">
-                        {hl.topics.map((t, i) => (
-                          <li key={i} className="text-xs text-[#2C2C2C] flex gap-1.5">
-                            <span className="text-[#AAAAAA] w-3 flex-shrink-0">{i + 1}</span>
-                            {t}
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -223,7 +181,7 @@ function HistoryPanel() {
   )
 }
 
-// ─── Main archive page ───────────────────────────────────────────────────────
+// ─── News search tab ─────────────────────────────────────────────────────────
 
 type PageTab = 'news' | 'history'
 
@@ -232,10 +190,10 @@ function ArchiveContent() {
   const initQ = searchParams.get('q') ?? ''
 
   const [pageTab, setPageTab] = useState<PageTab>('news')
-
-  const [tab,   setTab]   = useState<TabRange>('month')
+  const [tab,   setTab]   = useState<TabRange>('today')
   const [col,   setCol]   = useState('tw')
   const [cat,   setCat]   = useState('')
+  const [src,   setSrc]   = useState('')
   const [q,     setQ]     = useState(initQ)
   const [input, setInput] = useState(initQ)
 
@@ -245,152 +203,140 @@ function ArchiveContent() {
   const [total,      setTotal]      = useState(0)
   const [loading,    setLoading]    = useState(false)
 
+  const topRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  const fetchPage = useCallback(async (p: number, resetItems = false) => {
+  const fetchPage = useCallback(async (p: number) => {
     abortRef.current?.abort()
     const ctrl = new AbortController()
     abortRef.current = ctrl
-
     setLoading(true)
     try {
+      const mergedQ = [q, src].filter(Boolean).join(' ')
       const params = new URLSearchParams({
-        tab, col, page: String(p), limit: String(NEWS_LIMIT),
-        ...(q   ? { q }   : {}),
-        ...(cat ? { cat } : {}),
+        tab, col, page: String(p), limit: String(PAGE_SIZE),
+        ...(mergedQ ? { q: mergedQ } : {}),
+        ...(cat     ? { cat }        : {}),
       })
       const r = await fetch(`/api/news?${params}`, { signal: ctrl.signal })
       if (!r.ok) return
       const data = await r.json()
-      setItems(prev => resetItems ? (data.items ?? []) : [...prev, ...(data.items ?? [])])
+      setItems(data.items ?? [])
       setPage(data.page ?? p)
       setTotalPages(data.totalPages ?? 1)
       setTotal(data.total ?? 0)
-    } catch {
-      // aborted or network error
-    } finally {
-      setLoading(false)
-    }
-  }, [tab, col, q, cat])
+    } catch { /* aborted */ } finally { setLoading(false) }
+  }, [tab, col, q, cat, src])
 
-  useEffect(() => {
-    if (pageTab === 'news') fetchPage(1, true)
-  }, [fetchPage, pageTab])
+  useEffect(() => { if (pageTab === 'news') fetchPage(1) }, [fetchPage, pageTab])
 
-  const handleSearch = () => {
-    setQ(input.trim())
-    setPage(1)
+  const handleSearch = () => { setQ(input.trim()); setPage(1) }
+
+  const changePage = (p: number) => {
+    fetchPage(p)
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const loadMore = () => {
-    if (page < totalPages && !loading) fetchPage(page + 1)
-  }
+  const hasFilter = q !== '' || src !== '' || cat !== '' || tab !== 'today' || col !== 'tw'
 
   return (
     <div className="min-h-screen bg-[#F7F5F0]">
-      {/* Header */}
-      <div className="bg-white border-b border-[#E8E4DC] sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-4">
-          <Link href="/" className="text-[#5B7FA6] hover:text-[#3D5A7A] text-sm font-medium flex items-center gap-1.5">
-            ← 回首頁
+      <div className="bg-white border-b border-[#E8E4DC] sticky top-0 z-10 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+          <Link href="/" className="text-[#5B7FA6] hover:text-[#3D5A7A] text-sm font-medium flex items-center gap-1.5 flex-shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+            </svg>
+            首頁
           </Link>
           <div className="h-4 w-px bg-[#E8E4DC]" />
-          <h1 className="text-sm font-semibold text-[#2C2C2C]">查詢歷史新聞</h1>
+          <h1 className="text-sm font-semibold text-[#2C2C2C]">新聞搜尋</h1>
           {pageTab === 'news' && total > 0 && (
-            <span className="text-xs text-[#888888]">共 {total} 則</span>
+            <span className="text-xs text-[#888888] ml-auto">共 <strong className="text-[#2C2C2C]">{total}</strong> 則</span>
           )}
         </div>
       </div>
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-5 space-y-4">
-        {/* Page tabs */}
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-5 space-y-4" ref={topRef}>
         <div className="flex gap-2 border-b border-[#E8E4DC]">
           {([
-            { value: 'news',    label: '新聞存檔' },
+            { value: 'news',    label: '新聞搜尋'   },
             { value: 'history', label: 'AI 歷史分析' },
           ] as { value: PageTab; label: string }[]).map(t => (
-            <button
-              key={t.value}
-              onClick={() => setPageTab(t.value)}
-              className={clsx(
-                'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
-                pageTab === t.value
-                  ? 'border-[#5B7FA6] text-[#5B7FA6]'
-                  : 'border-transparent text-[#888888] hover:text-[#2C2C2C]'
-              )}
-            >
+            <button key={t.value} onClick={() => setPageTab(t.value)}
+              className={clsx('px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
+                pageTab === t.value ? 'border-[#5B7FA6] text-[#5B7FA6]' : 'border-transparent text-[#888888] hover:text-[#2C2C2C]')}>
               {t.label}
             </button>
           ))}
         </div>
 
-        {/* AI History tab */}
         {pageTab === 'history' && <HistoryPanel />}
 
-        {/* News archive tab */}
         {pageTab === 'news' && (
           <>
-            {/* Filters */}
-            <div className="bg-white border border-[#E8E4DC] rounded-xl p-4 space-y-3">
-              {/* Search */}
+            {/* Search + filter card */}
+            <div className="bg-white border border-[#E8E4DC] rounded-xl p-4 space-y-3 shadow-sm">
               <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                  placeholder="搜尋標題、來源關鍵字…"
-                  className="flex-1 text-sm border border-[#E8E4DC] rounded-lg px-3 py-2 outline-none focus:border-[#5B7FA6] bg-[#F7F5F0] placeholder:text-[#BBBBBB]"
-                />
-                <button
-                  onClick={handleSearch}
-                  className="px-4 py-2 bg-[#5B7FA6] text-white text-sm font-medium rounded-lg hover:bg-[#4A6E95] transition-colors"
-                >
+                <div className="flex-1 relative">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#AAAAAA]" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  <input type="text" value={input} onChange={e => setInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSearch()}
+                    placeholder="輸入關鍵字、人名、事件…"
+                    className="w-full pl-9 pr-3 py-2.5 text-sm border border-[#E8E4DC] rounded-lg outline-none focus:border-[#5B7FA6] focus:ring-1 focus:ring-[#5B7FA6]/20 bg-[#F7F5F0] placeholder:text-[#BBBBBB] transition-colors"
+                    autoFocus />
+                </div>
+                <button onClick={handleSearch}
+                  className="px-5 py-2.5 bg-[#5B7FA6] text-white text-sm font-medium rounded-lg hover:bg-[#4A6E95] transition-colors whitespace-nowrap">
                   搜尋
                 </button>
-                {q && (
-                  <button
-                    onClick={() => { setInput(''); setQ('') }}
-                    className="px-3 py-2 text-xs text-[#888888] border border-[#E8E4DC] rounded-lg hover:bg-[#F7F5F0]"
-                  >
+                {hasFilter && (
+                  <button onClick={() => { setInput(''); setQ(''); setSrc(''); setCat(''); setTab('today'); setCol('tw') }}
+                    className="px-3 py-2 text-xs text-[#888888] border border-[#E8E4DC] rounded-lg hover:bg-[#F7F5F0] whitespace-nowrap transition-colors">
                     清除
                   </button>
                 )}
               </div>
 
-              {/* Filter pills */}
-              <div className="flex flex-wrap gap-4 text-xs">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[#888888]">時間</span>
+              <div className="space-y-2 pt-1 border-t border-[#F0EDE6]">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] text-[#AAAAAA] w-8 flex-shrink-0">時間</span>
                   {TAB_OPTIONS.map(o => (
                     <button key={o.value} onClick={() => setTab(o.value)}
-                      className={clsx('px-2.5 py-0.5 rounded-full font-medium transition-colors',
-                        tab === o.value ? 'bg-[#5B7FA6] text-white' : 'bg-[#EFECE5] text-[#555555] hover:text-[#2C2C2C]'
-                      )}>
+                      className={clsx('px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors',
+                        tab === o.value ? 'bg-[#5B7FA6] text-white' : 'bg-[#EFECE5] text-[#555555] hover:text-[#2C2C2C]')}>
                       {o.label}
                     </button>
                   ))}
                 </div>
-
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[#888888]">來源</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] text-[#AAAAAA] w-8 flex-shrink-0">欄位</span>
                   {COL_OPTIONS.map(o => (
                     <button key={o.value} onClick={() => setCol(o.value)}
-                      className={clsx('px-2.5 py-0.5 rounded-full font-medium transition-colors',
-                        col === o.value ? 'bg-[#5B7FA6] text-white' : 'bg-[#EFECE5] text-[#555555] hover:text-[#2C2C2C]'
-                      )}>
+                      className={clsx('px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors',
+                        col === o.value ? 'bg-[#5B7FA6] text-white' : 'bg-[#EFECE5] text-[#555555] hover:text-[#2C2C2C]')}>
                       {o.label}
                     </button>
                   ))}
                 </div>
-
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[#888888]">分類</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] text-[#AAAAAA] w-8 flex-shrink-0">分類</span>
                   {CAT_OPTIONS.map(o => (
                     <button key={o.value} onClick={() => setCat(o.value)}
-                      className={clsx('px-2.5 py-0.5 rounded-full font-medium transition-colors',
-                        cat === o.value ? 'bg-[#5B7FA6] text-white' : 'bg-[#EFECE5] text-[#555555] hover:text-[#2C2C2C]'
-                      )}>
+                      className={clsx('px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors',
+                        cat === o.value ? 'bg-[#5B7FA6] text-white' : 'bg-[#EFECE5] text-[#555555] hover:text-[#2C2C2C]')}>
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] text-[#AAAAAA] w-8 flex-shrink-0">媒體</span>
+                  {SOURCE_OPTIONS.map(o => (
+                    <button key={o.value} onClick={() => setSrc(o.value)}
+                      className={clsx('px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors',
+                        src === o.value ? 'bg-[#5B7FA6] text-white' : 'bg-[#EFECE5] text-[#555555] hover:text-[#2C2C2C]')}>
                       {o.label}
                     </button>
                   ))}
@@ -398,26 +344,29 @@ function ArchiveContent() {
               </div>
             </div>
 
-            {q && (
-              <p className="text-xs text-[#888888]">
-                搜尋「<span className="text-[#2C2C2C] font-medium">{q}</span>」，找到 {total} 則
+            {(q || src) && (
+              <p className="text-xs text-[#888888] px-1">
+                {[q && `「${q}」`, src && `媒體：${src}`].filter(Boolean).join('・')}
+                <span className="ml-1">找到 <strong className="text-[#2C2C2C]">{total}</strong> 則</span>
               </p>
             )}
 
             <div className="space-y-2">
+              {loading && items.length === 0 && [...Array(8)].map((_, i) => (
+                <div key={i} className="h-16 bg-white border border-[#E8E4DC] rounded-lg animate-pulse" />
+              ))}
+              {!loading && items.length === 0 && (
+                <div className="text-center py-16 space-y-2">
+                  <p className="text-sm text-[#888888]">{q || src ? '找不到符合的新聞' : '此條件無新聞資料'}</p>
+                  {(q || src) && <p className="text-xs text-[#AAAAAA]">試試縮短關鍵字，或調整時間範圍</p>}
+                </div>
+              )}
               {items.map(item => (
-                <a
-                  key={item.id}
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex gap-3 bg-white border border-[#E8E4DC] rounded-lg px-4 py-3 hover:border-[#5B7FA6]/40 hover:bg-[#F7F9FC] transition-colors group"
-                >
+                <a key={item.id} href={item.url} target="_blank" rel="noopener noreferrer"
+                  className="flex gap-3 bg-white border border-[#E8E4DC] rounded-xl px-4 py-3 hover:border-[#5B7FA6]/40 hover:bg-[#F7F9FC] transition-colors group">
                   <span className={clsx('flex-shrink-0 w-1.5 h-1.5 rounded-full mt-2', sentimentDot(item.sentiment))} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-[#2C2C2C] leading-snug group-hover:text-[#3D5A7A]">
-                      {item.title}
-                    </p>
+                    <p className="text-sm text-[#2C2C2C] leading-snug group-hover:text-[#3D5A7A]">{item.title}</p>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       <span className="text-[11px] text-[#888888]">{item.source}</span>
                       <span className="text-[11px] text-[#BBBBBB]">·</span>
@@ -432,38 +381,17 @@ function ArchiveContent() {
                       )}
                     </div>
                   </div>
+                  <svg className="flex-shrink-0 w-3.5 h-3.5 text-[#CCCCCC] group-hover:text-[#5B7FA6] mt-1 transition-colors" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                  </svg>
                 </a>
               ))}
-
-              {items.length === 0 && !loading && (
-                <div className="text-center py-16 text-sm text-[#888888]">
-                  {q ? '找不到符合的新聞' : '此條件無新聞資料'}
-                </div>
-              )}
             </div>
 
-            {page < totalPages && (
-              <div className="flex justify-center pt-2">
-                <button
-                  onClick={loadMore}
-                  disabled={loading}
-                  className="px-6 py-2.5 bg-white border border-[#E8E4DC] rounded-lg text-sm text-[#5B7FA6] font-medium hover:bg-[#EBF0F7] hover:border-[#5B7FA6]/40 transition-colors disabled:opacity-50"
-                >
-                  {loading ? '載入中…' : `載入更多（第 ${page + 1} / ${totalPages} 頁）`}
-                </button>
-              </div>
-            )}
-
-            {loading && items.length === 0 && (
-              <div className="space-y-2">
-                {[...Array(8)].map((_, i) => (
-                  <div key={i} className="h-16 bg-white border border-[#E8E4DC] rounded-lg animate-pulse" />
-                ))}
-              </div>
-            )}
+            {totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={changePage} />}
 
             <p className="text-center text-[11px] text-[#CCCCCC] pb-4">
-              存檔保留最近 30 天 · 每欄最多 800 則 · 24 小時內新聞見首頁
+              資料保留最近 24 小時・每次手動整理可更新最新資料
             </p>
           </>
         )}
@@ -473,9 +401,5 @@ function ArchiveContent() {
 }
 
 export default function ArchivePage() {
-  return (
-    <Suspense>
-      <ArchiveContent />
-    </Suspense>
-  )
+  return <Suspense><ArchiveContent /></Suspense>
 }

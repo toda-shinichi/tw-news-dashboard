@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import SummaryBanner from '@/components/SummaryBanner'
 import HotList from '@/components/HotList'
@@ -42,6 +43,8 @@ export default function HomePage() {
   const [state, setState] = useState<PageState>(INITIAL_STATE)
   const [refreshing, setRefreshing] = useState(false)
   const [loadingLabel, setLoadingLabel] = useState<string>('正在抓取新聞…')
+  const [searchInput, setSearchInput] = useState('')
+  const router = useRouter()
 
   const safeFetch = useCallback(async (url: string) => {
     try {
@@ -154,6 +157,35 @@ export default function HomePage() {
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+        {/* 快速搜尋入口 */}
+        <form
+          onSubmit={e => {
+            e.preventDefault()
+            const q = searchInput.trim()
+            router.push(q ? `/archive?q=${encodeURIComponent(q)}` : '/archive')
+          }}
+          className="flex gap-2"
+        >
+          <div className="flex-1 relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#AAAAAA]" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              placeholder="搜尋新聞關鍵字、人名、媒體…"
+              className="w-full pl-9 pr-4 py-2.5 text-sm border border-[#E8E4DC] rounded-xl bg-white placeholder:text-[#BBBBBB] focus:outline-none focus:border-[#5B7FA6] focus:ring-1 focus:ring-[#5B7FA6]/20 transition-colors"
+            />
+          </div>
+          <button
+            type="submit"
+            className="px-5 py-2.5 bg-[#5B7FA6] text-white text-sm font-medium rounded-xl hover:bg-[#4A6E95] transition-colors shadow-sm whitespace-nowrap"
+          >
+            搜尋新聞
+          </button>
+        </form>
+
         {/* AI 輿情摘要 */}
         <SummaryBanner data={state.summary} loading={state.loading.summary} />
 

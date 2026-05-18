@@ -57,18 +57,15 @@ export default function Header({ updatedAt, onRefresh, refreshing }: HeaderProps
             </span>
           )}
 
-          {/* Archive link */}
+          {/* Archive / search link */}
           <Link
             href="/archive"
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#EBF0F7] text-[#5B7FA6] text-xs font-medium hover:bg-[#D6E4F0] transition-colors"
-            title="24 小時以上的新聞會自動歸檔到這裡"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#5B7FA6] text-white text-xs font-medium hover:bg-[#4A6E95] transition-colors shadow-sm"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="21 8 21 21 3 21 3 8" />
-              <rect x="1" y="3" width="22" height="5" />
-              <line x1="10" y1="12" x2="14" y2="12" />
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-            <span className="hidden sm:inline">查詢歷史新聞</span>
+            <span>新聞搜尋</span>
           </Link>
 
           {/* Sources info button */}
