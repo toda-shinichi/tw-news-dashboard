@@ -179,15 +179,10 @@ function PersonModal({ name, onClose }: { name: string; onClose: () => void }) {
               <p className="text-sm text-[#2C2C2C] leading-snug group-hover:text-[#2C5243]">
                 {item.title}
               </p>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
+              <div className="flex items-center gap-2 mt-1">
                 <span className="text-[11px] text-[#888888]">{item.source}</span>
                 <span className="text-[11px] text-[#CCCCCC]">·</span>
                 <span className="text-[11px] text-[#888888]">{formatDate(item.publishedAt)}</span>
-                <span className={`ml-auto text-[11px] px-1.5 py-0.5 rounded-full ${
-                  item.column === 'tw' ? 'bg-[#EBF0F7] text-[#5B7FA6]' : 'bg-[#F2EFF8] text-[#7A62A8]'
-                }`}>
-                  {item.column === 'tw' ? '台灣' : '國際'}
-                </span>
               </div>
             </a>
           ))}

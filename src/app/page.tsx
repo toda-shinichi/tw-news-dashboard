@@ -177,7 +177,7 @@ export default function HomePage() {
 
       <footer className="max-w-7xl mx-auto px-4 sm:px-6 py-8 mt-4 border-t border-[#E8E4DC] space-y-2">
         <p className="text-xs text-[#888888] text-center leading-relaxed">
-          資料來源：自由時報・聯合新聞網・ETtoday・新頭殼・公視新聞・風傳媒・中央社・iThome・TechNews・經濟日報・Google News・GDELT・NewsAPI・Mediastack・GNews
+          資料來源：自由時報・ETtoday・新頭殼・公視新聞・中央社・經濟日報・風傳媒・Yahoo 奇摩新聞・Google News（聯合新聞網・TVBS・中國時報等）・Mediastack・GNews
         </p>
         <p className="text-xs text-[#AAAAAA] text-center">
           © {new Date().getFullYear()} 子桓 Huan Hsu｜
