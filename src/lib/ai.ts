@@ -8,8 +8,8 @@ export interface NewsStats {
   totalCount: number
 }
 
-const MODEL_QUALITY = 'gpt-5.4-mini-as'
-const MODEL_FAST    = 'gpt-5.4-mini-as'
+const MODEL_QUALITY = 'gemini-3.5-flash'
+const MODEL_FAST    = 'gemini-3.5-flash'
 
 function getClient(): OpenAI {
   return new OpenAI({
